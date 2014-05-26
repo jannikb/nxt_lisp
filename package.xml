@@ -4,7 +4,7 @@
   <version>0.0.0</version>
   <description>NXT Lisp Tutorial Project</description>
 
-  <maintainer email="winkler@cs.uni-bremen.de">Jan Winkler</maintainer>
+  <maintainer email="jannikbu@cs.uni-bremen.de">Jannik Buckelo</maintainer>
 
   <license>BSD</license>
   <author email="winkler@cs.uni-bremen.de">Jan Winkler</author>
