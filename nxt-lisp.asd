@@ -1,4 +1,5 @@
-;;; Copyright (c) 2014, Jan Winkler <winkler@cs.uni-bremen.de>
+;;; Copyright (c) 2014, Jannik Buckelo <jannikbu@cs.uni-bremen.de> and
+;;;                     Simon Stelter <stelter@cs.uni-bremen.de>
 ;;; All rights reserved.
 ;;; 
 ;;; Redistribution and use in source and binary forms, with or without
@@ -27,7 +28,7 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 
 (defsystem nxt-lisp
-  :author "Jan Winkler"
+  :author "Jannik Buckelo, Simon Stelter"
   :license "BSD"
   :description "NXT Lisp Tutorial Project"
 

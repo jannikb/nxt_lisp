@@ -5,9 +5,11 @@
   <description>NXT Lisp Tutorial Project</description>
 
   <maintainer email="jannikbu@cs.uni-bremen.de">Jannik Buckelo</maintainer>
+  <maintainer email="stelter@cs.uni-bremen.de">Simon Stelter</maintainer>
 
   <license>BSD</license>
-  <author email="winkler@cs.uni-bremen.de">Jan Winkler</author>
+  <author email="jannikbu@cs.uni-bremen.de">Jannik Buckelo</author>
+  <author email="stelter@cs.uni-bremen.de">Simon Stelter</author>
 
   <buildtool_depend>catkin</buildtool_depend>
   
