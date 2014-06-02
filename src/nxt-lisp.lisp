@@ -29,17 +29,21 @@
 
 (in-package :nxt-lisp)
 
-(defvar *joint-command-publisher* nil)
+(defvar *joint-command-publisher* nil
+  "Advertiser for the joint_command-topic")
 
 (defun startup ()
+  "Initializes the system."
   (roslisp-utilities:startup-ros)
   (setf *joint-command-publisher*
-        (roslisp:advertise "/joint_command"
-                           "nxt_msgs/JointCommand")))
+        (advertise "/joint_command"
+                   "nxt_msgs/JointCommand")))
 
 (defun set-motor-effort (name effort)
-  (roslisp:publish
-   *joint-command-publisher*
-   (make-message "nxt_msgs/JointCommand"
-                 :name name
-                 :effort effort)))
+  (assert *joint-command-publisher* 
+          (*joint-command-publisher*)
+          "The advertiser for joint_command wasn't initialized.~%Call startup first.")
+  (publish *joint-command-publisher*
+           (make-message "nxt_msgs/JointCommand"
+                         :name name
+                         :effort effort)))
