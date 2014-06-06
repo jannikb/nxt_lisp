@@ -32,6 +32,9 @@
 (defvar *joint-command-publisher* nil
   "Advertiser for the joint_command-topic")
 
+(defvar *ultrasonic-subscriber* nil
+  "Subscriber for the ultrasonic-sensor")
+
 (defun startup ()
   "Initializes the system."
   (roslisp-utilities:startup-ros)
@@ -47,3 +50,8 @@
            (make-message "nxt_msgs/JointCommand"
                          :name name
                          :effort effort)))
+
+(defun listen-to-ultrasonic ()
+  (if (not *ultrasonic-sensor*)
+      (setf *ultrasonic-subscriber*
+            (subscribe "ultrasonic_sensor" "sensor_msgs/Range" (lambda (msg) (format t "msg: ~a~%" msg))))))

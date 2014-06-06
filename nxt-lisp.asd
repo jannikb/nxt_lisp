@@ -34,6 +34,8 @@
 
   :depends-on (roslisp
                roslisp-utilities
+               nxt_msgs-msg
+               sensor_msgs-msg
                alexandria)
   :components
   ((:module "src"
