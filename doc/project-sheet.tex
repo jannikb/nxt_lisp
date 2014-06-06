@@ -1,0 +1,82 @@
+\documentclass[8pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage{amsmath}
+\usepackage{nicefrac}
+\usepackage{color}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[a4paper,top=2cm,left=4cm,right=4cm,bottom=2cm,marginparwidth=5cm]{geometry}
+\usepackage{marginnote}
+\usepackage[automark]{scrpage2}
+\pagestyle{scrheadings}
+
+\newcommand{\fatnote}[1]{\marginnote{\textbf{#1}}}
+\newcommand{\leftnote}[1]{\reversemarginpar\fatnote{#1}}
+\newcommand{\rightnote}[1]{\normalmarginpar\fatnote{#1}}
+
+\newcommand{\defin}[1]{\noindent #1\vspace{0.3cm}}
+\newcommand{\ldefin}[2]{\leftnote{#1}\defin{#2}}
+\newcommand{\rdefin}[2]{\rightnote{#1}\defin{#2}}
+
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO}: #1}}
+
+\newcommand{\coursename}{\@empty}
+\newcommand{\groupno}{\@empty}
+
+\newcommand{\course}[2]{\renewcommand{\coursename}{#1}\renewcommand{\groupno}{#2}}
+\newcommand{\beginsheet}{\clearscrheadfoot\ihead[]{Kurs: \coursename}\ohead[]{Gruppe \groupno}\ofoot[]{\pagemark}\ifoot[]{Dieses Dokument ist Teil der Dokumentation}}
+
+\newcommand{\email}[1]{\href{mailto:#1}{#1}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Oberhalb dieses Blocks nichts ändern
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% TODO: Hier die fehlende Gruppennummer einfügen
+\course{Lisp Kurs -- Roboterprogrammierung in Lisp}{4}
+
+
+\begin{document}
+
+\beginsheet
+
+\section*{Projekt-Übersicht}
+Stand: \today\\[0.25cm]
+Mitglieder:\\[0.25cm]
+%% TODO: Hier die Mitglieder samt E-Mail-Adressen eintragen
+\begin{tabular}{|p{0.5\columnwidth}|p{0.5\columnwidth}|}
+  \hline
+  \textbf{Name} & \textbf{E-Mail} \\
+  \hline
+  \hline
+  Jannik Buckelo & \email{jannikbu@tzi.de} \\
+  \hline
+  Simon Stelter & \email{stelter@tzi.de} \\
+  \hline
+\end{tabular}
+\vspace{0.25cm}\\
+Betreuer:\\[0.25cm]
+\begin{tabular}{|p{0.5\columnwidth}|p{0.5\columnwidth}|}
+  \hline
+  \textbf{Name} & \textbf{E-Mail} \\
+  \hline
+  \hline
+  Jan Winkler & \email{jwinkler@uni-bremen.de} \\
+  \hline
+\end{tabular}
+\vspace{0.25cm}\\
+Projekt-Repository: \url{https://github.com/jannikb/nxt_lisp}
+
+\subsection*{Thema und Problemstellung}
+
+Unser NXT-Roboter soll nur ein Rad oder 2 Räder nebeneinander haben, sodass er wenn er angestoßen wird nach vorne oder hinten kippen würde. Wir wollen dann einen Plan entwicklen, der dem Roboter hilft das Gleichgewicht zu behalten.
+
+\subsection*{Angestrebte Problemlösung}
+
+Wir wollen versuchen mittels des Ultraschallsensors die Pose des Roboters zu ermitteln. Sollte die Pose von der gewünschten Pose abweichen, sollen mittels Bewegungen der Räder wieder die gewünschte Pose eingenommen werden. Das System soll also ähnlich wie ein Segway funktionieren.
+
+\end{document}
