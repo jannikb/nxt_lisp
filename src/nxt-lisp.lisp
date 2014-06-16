@@ -35,6 +35,12 @@
 (defvar *ultrasonic-subscriber* nil
   "Subscriber for the ultrasonic-sensor")
 
+(defvar *stand* '(0 0 0 0))
+
+(defparameter *r-wheel* "r_wheel_joint")
+
+(defparameter *l-wheel* "l_wheel_joint")
+
 (defun startup ()
   "Initializes the system."
   (roslisp-utilities:startup-ros)
@@ -42,16 +48,36 @@
         (advertise "/joint_command"
                    "nxt_msgs/JointCommand")))
 
-(defun set-motor-effort (name effort)
+(defun set-l-motor-effort (effort)
   (assert *joint-command-publisher* 
           (*joint-command-publisher*)
           "The advertiser for joint_command wasn't initialized.~%Call startup first.")
   (publish *joint-command-publisher*
            (make-message "nxt_msgs/JointCommand"
-                         :name name
+                         :name *l-wheel*
                          :effort effort)))
+
+(defun set-r-motor-effort (effort)
+  (assert *joint-command-publisher* 
+          (*joint-command-publisher*)
+          "The advertiser for joint_command wasn't initialized.~%Call startup first.")
+  (publish *joint-command-publisher*
+           (make-message "nxt_msgs/JointCommand"
+                         :name *r-wheel*
+                         :effort effort)))
+
+(defun set-motor-effort (effort)
+  (set-l-motor-effort effort)
+  (set-r-motor-effort effort))
 
 (defun listen-to-ultrasonic ()
   (if (not *ultrasonic-sensor*)
       (setf *ultrasonic-subscriber*
-            (subscribe "ultrasonic_sensor" "sensor_msgs/Range" (lambda (msg) (format t "msg: ~a~%" msg))))))
+            (subscribe 
+             "ultrasonic_sensor" 
+             "sensor_msgs/Range" 
+             (lambda (msg) (format t "msg: ~a~%" msg))))))
+
+;;;2. datei
+
+(defun muh (robot-state))  

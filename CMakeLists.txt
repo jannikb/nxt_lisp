@@ -5,6 +5,7 @@ project(nxt_lisp)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  message_generation
   nxt_msgs
   roslisp
   roslisp_utilities
