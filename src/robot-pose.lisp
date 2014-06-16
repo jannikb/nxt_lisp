@@ -27,12 +27,27 @@
 ;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ;;; POSSIBILITY OF SUCH DAMAGE.
 
-(in-package :cl-user)
+(in-package :nxt-lisp)
 
-(defpackage nxt-lisp
-  (:documentation "NXT Lisp Tutorial Project")
-  (:use #:common-lisp
-        #:roslisp
-        #:alexandria
-        #:sb-thread)
-  (:export))
+(defvar *gyro-subscriber* nil)
+
+(defclass robot-state ()
+  ((rotation :accessor rotation)
+   (acceleration :accessor acceleration)
+   (gyroscope :accessor gyroscope)
+   (rotation-lock :reader rotation-lock 
+                  :initform (make-mutex :name "rotation-lock"))
+   (acceleration-lock :reader acceleration-lock
+                      :initform (make-mutex :name "acceleration-lock"))
+   (gyroscope-lock :reader gyroscope-lock
+                   :initform (make-mutex :name "rotation-lock"))))
+
+(defun update-robot-state (callback)
+  (let ((robot-state (make-instance 'robot-state)))
+    (make-thread #'(lambda () (handle-callback robot-state callback)))))
+
+(defun handle-callback (robot-state callback)
+  (loop
+    (funcall callback robot-state)))
+                     
+  
