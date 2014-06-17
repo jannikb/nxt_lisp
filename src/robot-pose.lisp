@@ -29,12 +29,18 @@
 
 (in-package :nxt-lisp)
 
+(defvar *rotation-subscriber* nil)
+(defvar *acceleration-subscriber* nil)
 (defvar *gyro-subscriber* nil)
+(defvar *callback-thread* nil)
 
 (defclass robot-state ()
-  ((rotation :accessor rotation)
-   (acceleration :accessor acceleration)
-   (gyroscope :accessor gyroscope)
+  ((rotation :initform nil
+             :accessor rotation)
+   (acceleration :initform nil
+                 :accessor acceleration)
+   (gyroscope :initform nil
+              :accessor gyroscope)
    (rotation-lock :reader rotation-lock 
                   :initform (make-mutex :name "rotation-lock"))
    (acceleration-lock :reader acceleration-lock
@@ -43,11 +49,58 @@
                    :initform (make-mutex :name "rotation-lock"))))
 
 (defun update-robot-state (callback)
+  "Calls the callback in a loop with the actual state of the robot.
+   `callback' needs to take the robot-state as an arguement."
   (let ((robot-state (make-instance 'robot-state)))
-    (make-thread #'(lambda () (handle-callback robot-state callback)))))
+    (setf *rotation-subscriber* 
+          (subscribe "" "" #'(lambda (msg) (rotation-callback robot-state msg)))
+          *acceleration-subscriber* 
+          (subscribe "" "" #'(lambda (msg) (acceleration-callback robot-state msg)))
+          *gyro-subscriber* 
+          (subscribe "" "" #'(lambda (msg) (gyro-callback robot-state msg)))
+          *callback-thread* 
+          (make-thread #'(lambda () (handle-callback robot-state callback))))))
+
+;;; TODO maybe change defun to defmethod and defgeneric
 
 (defun handle-callback (robot-state callback)
+  "Waits for the robot-state to be initialized and than calls
+   the callback with the robot-state in regular intervalls."
+  (wait-for-init-attributes robot-state)
   (loop
-    (funcall callback robot-state)))
+    ;; TODO should this be called in a thread or not and how long should the sleep be
+    (make-thread #'(funcall callback robot-state))
+    (sleep 0.01)))
+
+(defun wait-for-init-attributes (robot-state)
+  "Loops until all the attributes of the robot-state have been initialized"
+  ;; TODO do we need the lock here?
+  (loop until (and (rotation robot-state)
+                   (acceleration robot-state)
+                   (gyroscope robot-state))
+        do (sleep 0.01)))
+
+(defun rotation-callback (robot-state msg)
+  "Callback for the topic with the rotation of the robot that updates 
+   the robot-state."
+  (with-fields (x y z) msg
+    (with-recursive-lock ((rotation-lock robot-state))
+      (setf (rotation robot-state) (list x y z)))))
+
+(defun acceleration-callback (robot-state msg)
+  "Callback for the topic with the acceleration of the robot that updates 
+   the robot-state."
+  (with-fields (x y z) msg
+    (with-recursive-lock ((acceleration-lock robot-state))
+      (setf (acceleration robot-state) (list x y z)))))
+
+(defun gyro-callback (robot-state msg)
+  "Callback for the topic with the gyroscope of the robot that updates 
+   the robot-state."
+  (with-fields (x y z) msg
+    (with-recursive-lock ((gyroscope-lock robot-state))
+      (setf (gyroscope robot-state) (list x y z)))))
+    
+    
                      
   
