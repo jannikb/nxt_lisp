@@ -69,7 +69,7 @@
   (wait-for-init-attributes robot-state)
   (loop
     ;; TODO should this be called in a thread or not and how long should the sleep be
-    (make-thread #'(funcall callback robot-state))
+    (make-thread #'(lambda () (funcall callback robot-state)))
     (sleep 0.01)))
 
 (defun wait-for-init-attributes (robot-state)

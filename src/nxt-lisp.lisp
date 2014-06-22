@@ -80,4 +80,18 @@
 
 ;;;2. datei
 
-(defun muh (robot-state))  
+(defparameter *x-tolerance* 0.1)
+(defparameter *y-tolerance* 0.1)
+(defparameter *z-tolerance* 0.1)
+
+(defun muh (robot-state)
+  (let ((x 0) (y 0) (z 0))
+    (with-recursive-lock ((gyroscope-lock robot-state))
+      (setf x (first (gyroscope robot-state)))
+      (setf y (second (gyroscope robot-state)))
+      (setf z (third (gyroscope robot-state))))
+    ;;TODO evt mehr/weniger beschleunigen, abhängig von der Neigung
+    (cond 
+      ((< x *x-tolerance*) (set-motor-effort 1))
+      ((> x *x-tolerance*) (set-motor-effort -1)))))
+        
