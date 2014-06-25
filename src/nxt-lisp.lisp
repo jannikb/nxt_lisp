@@ -29,11 +29,11 @@
 
 (in-package :nxt-lisp)
 
-(defvar *joint-command-publisher* nil
+(defvar *joint-command-pub* nil
   "Advertiser for the joint_command-topic")
 
-(defvar *ultrasonic-subscriber* nil
-  "Subscriber for the ultrasonic-sensor")
+(defvar *rotation-vector-sub* nil
+  "Subscriber for the rotation-vector")
 
 (defvar *stand* '(0 0 0 0))
 
@@ -44,39 +44,49 @@
 (defun startup ()
   "Initializes the system."
   (roslisp-utilities:startup-ros)
-  (setf *joint-command-publisher*
+  (setf *joint-command-pub*
         (advertise "/joint_command"
                    "nxt_msgs/JointCommand")))
 
-(defun set-l-motor-effort (effort)
-  (assert *joint-command-publisher* 
-          (*joint-command-publisher*)
+(defun set-motor-effort-helper (effort motor)
+  (assert *joint-command-pub* 
+          (*joint-command-pub*)
           "The advertiser for joint_command wasn't initialized.~%Call startup first.")
-  (publish *joint-command-publisher*
+  (publish *joint-command-pub*
            (make-message "nxt_msgs/JointCommand"
-                         :name *l-wheel*
+                         :name motor
                          :effort effort)))
 
+(defun set-l-motor-effort (effort)
+  (set-motor-effort-helper effort *l-wheel*))
+
 (defun set-r-motor-effort (effort)
-  (assert *joint-command-publisher* 
-          (*joint-command-publisher*)
-          "The advertiser for joint_command wasn't initialized.~%Call startup first.")
-  (publish *joint-command-publisher*
-           (make-message "nxt_msgs/JointCommand"
-                         :name *r-wheel*
-                         :effort effort)))
+  (set-motor-effort-helper effort *r-wheel*))
 
 (defun set-motor-effort (effort)
   (set-l-motor-effort effort)
   (set-r-motor-effort effort))
 
-(defun listen-to-ultrasonic ()
-  (if (not *ultrasonic-sensor*)
-      (setf *ultrasonic-subscriber*
-            (subscribe 
-             "ultrasonic_sensor" 
-             "sensor_msgs/Range" 
-             (lambda (msg) (format t "msg: ~a~%" msg))))))
+(defun keep-balance (rpy)
+  (let ((rotation-errors nil))
+    (setf *rotation-vector-sub*
+          (subscribe "/rotation_vector" "geometry_msgs/Quaternion"
+                     #'(lambda (msg) 
+                         (with-fields (x y z w) msg
+                           (push (mapcar #'- (quaternion->rpy x y z w) rpy)
+                                 rotation-errors)
+                           (control-motor-effort rotation-errors))))))) 
+
+(defun quaternion->rpy (x y z w)
+  (let ((vector-3d (cl-transforms:quaternion->axis-angle 
+                    (cl-transforms:make-quaternion x y z w))))
+    (list (cl-transforms:x vector-3d)
+          (cl-transforms:y vector-3d)
+          (cl-transforms:z vector-3d))))
+    
+(defun control-motor-effort (rotation-errors)
+  (let ((effort (pid rotation-errors)))
+    (set-motor-effort effort)))
 
 ;;;2. datei
 

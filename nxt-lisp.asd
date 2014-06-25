@@ -42,5 +42,5 @@
   ((:module "src"
             :components
             ((:file "package")
-             (:file "robot-pose" :depends-on ("package"))
-             (:file "nxt-lisp" :depends-on ("package" "robot-pose"))))))
+             ;;(:file "robot-pose" :depends-on ("package"))
+             (:file "nxt-lisp" :depends-on ("package"))))))
