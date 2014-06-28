@@ -36,6 +36,7 @@
                roslisp-utilities
                nxt_msgs-msg
                sensor_msgs-msg
+               visualization_msgs-msg
                alexandria
                cl-tf)
   :components

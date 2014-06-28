@@ -37,6 +37,10 @@
 
 (defvar *stand* '(0 0 0 0))
 
+(defvar *pub* nil)
+
+(defvar *pubi* nil)
+
 (defparameter *r-wheel* "r_wheel_joint")
 
 (defparameter *l-wheel* "l_wheel_joint")
@@ -46,7 +50,11 @@
   (roslisp-utilities:startup-ros)
   (setf *joint-command-pub*
         (advertise "/joint_command"
-                   "nxt_msgs/JointCommand")))
+                   "nxt_msgs/JointCommand")
+        *pub* (advertise "/muh23"
+                         "geometry_msgs/PoseStamped")
+        *pubi* (advertise "/goal"
+                         "geometry_msgs/PoseStamped")))
 
 (defun set-motor-effort-helper (effort motor)
   (assert *joint-command-pub* 
@@ -68,14 +76,53 @@
   (set-r-motor-effort effort))
 
 (defun keep-balance (rpy)
-  (let ((rotation-errors nil))
+  (let ((rotation-errors nil)
+        (qd (cl-tf:euler->quaternion :ax (+ 0 (first rpy))
+                                      :ay (second rpy)
+                                      :az (+ 1.57 (third rpy)))))
+    (when *rotation-vector-sub*
+      (unsubscribe *rotation-vector-sub*))
     (setf *rotation-vector-sub*
-          (subscribe "/rotation_vector" "geometry_msgs/Quaternion"
+          (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
                      #'(lambda (msg) 
                          (with-fields (x y z w) msg
-                           (push (mapcar #'- (quaternion->rpy x y z w) rpy)
-                                 rotation-errors)
-                           (control-motor-effort rotation-errors))))))) 
+                           (setf rotation-errors 
+                                 (add-error (magic x y z w qd)
+                                            rotation-errors))
+                           (control-motor-effort rotation-errors)
+                           (visu x y z w)
+                           (visu-goal qd)
+                           (format t "~a~%" rotation-errors)))))))
+
+(defun magic (x y z w qd)
+  (let* ((q (cl-transforms:make-quaternion x y z w))
+        (angle (cl-transforms:angle-between-quaternions qd q)))
+    (format t "~a~%" angle)
+    (- angle 1.57)))
+
+(defun stop ()
+  (set-motor-effort 0)
+  (unsubscribe *rotation-vector-sub*)
+  (setf *rotation-vector-sub* nil))
+
+(defun add-error (err err-l)
+  (when (> (length err-l) 9)
+    (setf err-l (butlast err-l)))
+  (push err err-l))
+
+(defun visu-goal (q)
+  (publish *pubi* 
+           (cl-tf:pose-stamped->msg 
+            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
+                                     (cl-transforms:make-identity-vector) 
+                                     q))))
+
+(defun visu (x y z w)
+  (publish *pub* 
+           (cl-tf:pose-stamped->msg 
+            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
+                                     (cl-transforms:make-identity-vector) 
+                                     (cl-transforms:make-quaternion x y z w)))))
 
 (defun quaternion->rpy (x y z w)
   (let ((vector-3d (cl-transforms:quaternion->axis-angle 
@@ -86,23 +133,69 @@
     
 (defun control-motor-effort (rotation-errors)
   (let ((effort (pid rotation-errors)))
+    (effort-visualization effort)
     (set-motor-effort effort)))
 
 ;;;2. datei
 
-(defparameter *kp* 0.5d0)
-(defparameter *ki* 0.5d0)
+(defparameter *kp* -7d0)
+(defparameter *ki* -1d0)
 (defparameter *kd* 0.5d0)
 
 (defun pid (error-robot-states)
-  (let* ((e (first error-robot-states)))
+  (let* ((e (first error-robot-states))
+         (l (length error-robot-states)))
     (+ (* *kp* e) 
        (* *ki* 
-          (/ (reduce #'+ (rest error-robot-states))
-             (1- (length error-robot-states)))))))
+          (if (= l 1)
+              0
+              (/ (reduce #'+ (rest error-robot-states))
+                 (1- l)))))))
 
 
 (defun r-per-s (rad-list time1 time2)
   (/ (- (second rad-list) (first rad-list)) (- time2 time1)))
 
 
+;;; 3. datei
+
+(defparameter *visualization-advertiser* nil)
+
+(defun effort-visualization (effort)
+  (let ((pose-stamped (cl-tf:make-pose-stamped "/odom_combined" 
+                                                0d0 
+                                                (cl-transforms:make-3d-vector 0.5 0.3 0) 
+                                                (cl-transforms:make-identity-rotation))))
+    (publish-visualization-marker pose-stamped (* 0.2 effort))))
+
+(defun publish-visualization-marker (pose-stamped length)
+  (when (not *visualization-advertiser*)
+    (setf *visualization-advertiser* 
+          (advertise "/visualization_marker" 
+                     "visualization_msgs/Marker")))
+  (let ((origin (cl-tf:origin pose-stamped))
+        (orientation (cl-tf:orientation pose-stamped)))
+    (publish *visualization-advertiser*
+             (make-message "visualization_msgs/Marker"
+                           (frame_id header) (cl-tf:frame-id pose-stamped)
+                           (stamp header)  (ros-time)
+                           ns "nxt_lisp"
+                           id 0
+                           type (symbol-code 'visualization_msgs-msg:marker 
+                                             :arrow)
+                           action 0
+                           (x position pose) (cl-tf:x origin)
+                           (y position pose) (cl-tf:y origin)
+                           (z position pose) (cl-tf:z origin)
+                           (x orientation pose) (cl-tf:x orientation)
+                           (y orientation pose) (cl-tf:y orientation)
+                           (z orientation pose) (cl-tf:z orientation)
+                           (w orientation pose) (cl-tf:w orientation)
+                           (x scale) length
+                           (y scale) 0.1
+                           (z scale) 0.1
+                           (a color) 1
+                           (r color) 0
+                           (g color) 1
+                           (b color) 0
+                           lifetime 0))))
