@@ -78,8 +78,8 @@
 (defun keep-balance (rpy)
   (let ((rotation-errors nil)
         (qd (cl-tf:euler->quaternion :ax (+ 0 (first rpy))
-                                      :ay (second rpy)
-                                      :az (+ 1.57 (third rpy)))))
+                                     :ay (second rpy)
+                                     :az (+ 1.57 (third rpy)))))
     (when *rotation-vector-sub*
       (unsubscribe *rotation-vector-sub*))
     (setf *rotation-vector-sub*
@@ -92,13 +92,10 @@
                            (control-motor-effort rotation-errors)
                            (visu x y z w)
                            (visu-goal qd)
-                           (format t "~a~%" rotation-errors)))))))
+                           (format t "~a~%" (quaternion->rpy x y z w))))))))
 
 (defun magic (x y z w qd)
-  (let* ((q (cl-transforms:make-quaternion x y z w))
-        (angle (cl-transforms:angle-between-quaternions qd q)))
-    (format t "~a~%" angle)
-    (- angle 1.57)))
+  (- (angle-q (cl-transforms:make-quaternion x y z w) qd) 1.57 ))
 
 (defun stop ()
   (set-motor-effort 0)
@@ -124,13 +121,12 @@
                                      (cl-transforms:make-identity-vector) 
                                      (cl-transforms:make-quaternion x y z w)))))
 
-(defun quaternion->rpy (x y z w)
-  (let ((vector-3d (cl-transforms:quaternion->axis-angle 
-                    (cl-transforms:make-quaternion x y z w))))
-    (list (cl-transforms:x vector-3d)
-          (cl-transforms:y vector-3d)
-          (cl-transforms:z vector-3d))))
-    
+(defun quaternion->rpy (qx qy qz qw)
+  (let* ((y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
+         (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
+         (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
+    (list x y z)))
+  
 (defun control-motor-effort (rotation-errors)
   (let ((effort (pid rotation-errors)))
     (effort-visualization effort)
@@ -151,10 +147,6 @@
               0
               (/ (reduce #'+ (rest error-robot-states))
                  (1- l)))))))
-
-
-(defun r-per-s (rad-list time1 time2)
-  (/ (- (second rad-list) (first rad-list)) (- time2 time1)))
 
 
 ;;; 3. datei
@@ -199,3 +191,55 @@
                            (g color) 1
                            (b color) 0
                            lifetime 0))))
+
+;Datei 4.
+
+(defmacro g (field msg)
+  `(with-fields ((f ,field))
+       ,msg
+     f))
+
+(defun quaternion->euler (q)
+  (let* ((qw (g w q))
+         (qx (g x q))
+         (qy (g y q))
+         (qz (g z q))
+         (y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
+         (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
+         (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
+    (list x y z)))
+    
+(defparameter *pi* 3.14159265359)
+
+(defun rpy->tr (r p y)
+  (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0) 
+                        (cl-tf:euler->quaternion :ax r
+                                                 :ay p
+                                                 :az y)))
+
+(defun quaternion->tr (q)
+  (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0)
+                        q))
+
+(defun quaternion->point (q)
+  (cl-transforms:transform-point (quaternion->tr q) 
+                                 (cl-transforms:make-3d-vector 1 0 0)))
+
+(defun magnitude (p)
+  (sqrt (+ (* (g x p) (g x p))
+           (* (g y p) (g y p))
+           (* (g z p) (g z p)))))
+
+(defun angle (p1 p2)
+  (acos (+ (* (g x p1) (g x p2))
+           (* (g y p1) (g y p2))
+           (* (g z p1) (g z p2)))))
+
+(defun angle-q (q1 q2)
+  (angle (quaternion->point q1)
+         (quaternion->point q2)))
+  
+
+
+
+
