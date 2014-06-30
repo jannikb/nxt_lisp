@@ -66,9 +66,11 @@
                          :effort effort)))
 
 (defun set-l-motor-effort (effort)
+  (effort-visualization effort 0)
   (set-motor-effort-helper effort *l-wheel*))
 
 (defun set-r-motor-effort (effort)
+  (effort-visualization effort 1)
   (set-motor-effort-helper effort *r-wheel*))
 
 (defun set-motor-effort (effort)
@@ -78,32 +80,36 @@
 (defun keep-balance (rpy)
   (let ((rotation-errors nil)
         (qd (cl-tf:euler->quaternion :ax (+ 0 (first rpy))
-                                     :ay (second rpy)
+                                     :ay (+ 0 (second rpy))
                                      :az (+ 1.57 (third rpy)))))
     (when *rotation-vector-sub*
-      (unsubscribe *rotation-vector-sub*))
+      (unsubscribe *rotation-vector-sub*)
+      (setf *rotation-vector-sub* nil))
     (setf *rotation-vector-sub*
           (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
                      #'(lambda (msg) 
                          (with-fields (x y z w) msg
-                           (setf rotation-errors 
-                                 (add-error (magic x y z w qd)
-                                            rotation-errors))
-                           (control-motor-effort rotation-errors)
-                           (visu x y z w)
-                           (visu-goal qd)
-                           (format t "~a~%" (quaternion->rpy x y z w))))))))
+                           (let ((q (cl-transforms:make-quaternion x y z w)))
+                             (setf rotation-errors 
+                                   (add-error (magic x y z w qd)
+                                              rotation-errors))
+                             (control-motor-effort rotation-errors)
+                             (visu x y z w)
+                             (visu-goal qd))))))))
+;                             (format t "~a ~a ~a~%" (pitch q) (roll q) (yaw q)))))))))
 
 (defun magic (x y z w qd)
-  (- (angle-q (cl-transforms:make-quaternion x y z w) qd) 1.57 ))
+;  (pitch (cl-transforms:make-quaternion x y z w)))
+  (- (angle-q (cl-transforms:make-quaternion x y z w) qd 1 0 0) 1.57 ))
 
 (defun stop ()
   (set-motor-effort 0)
-  (unsubscribe *rotation-vector-sub*)
-  (setf *rotation-vector-sub* nil))
+  (when *rotation-vector-sub*
+    (unsubscribe *rotation-vector-sub*)
+    (setf *rotation-vector-sub* nil)))
 
 (defun add-error (err err-l)
-  (when (> (length err-l) 9)
+  (when (> (length err-l) 49)
     (setf err-l (butlast err-l)))
   (push err err-l))
 
@@ -120,22 +126,21 @@
             (cl-tf:make-pose-stamped "/base_footprint" 0d0 
                                      (cl-transforms:make-identity-vector) 
                                      (cl-transforms:make-quaternion x y z w)))))
+  
+(defun control-motor-effort (rotation-errors)
+  (let ((effort (pid rotation-errors)))
+    (set-motor-effort effort)))
+
+;;;2. datei
 
 (defun quaternion->rpy (qx qy qz qw)
   (let* ((y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
          (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
          (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
     (list x y z)))
-  
-(defun control-motor-effort (rotation-errors)
-  (let ((effort (pid rotation-errors)))
-    (effort-visualization effort)
-    (set-motor-effort effort)))
 
-;;;2. datei
-
-(defparameter *kp* -7d0)
-(defparameter *ki* -1d0)
+(defparameter *kp* -4d0)
+(defparameter *ki* 1d0)
 (defparameter *kd* 0.5d0)
 
 (defun pid (error-robot-states)
@@ -147,52 +152,6 @@
               0
               (/ (reduce #'+ (rest error-robot-states))
                  (1- l)))))))
-
-
-;;; 3. datei
-
-(defparameter *visualization-advertiser* nil)
-
-(defun effort-visualization (effort)
-  (let ((pose-stamped (cl-tf:make-pose-stamped "/odom_combined" 
-                                                0d0 
-                                                (cl-transforms:make-3d-vector 0.5 0.3 0) 
-                                                (cl-transforms:make-identity-rotation))))
-    (publish-visualization-marker pose-stamped (* 0.2 effort))))
-
-(defun publish-visualization-marker (pose-stamped length)
-  (when (not *visualization-advertiser*)
-    (setf *visualization-advertiser* 
-          (advertise "/visualization_marker" 
-                     "visualization_msgs/Marker")))
-  (let ((origin (cl-tf:origin pose-stamped))
-        (orientation (cl-tf:orientation pose-stamped)))
-    (publish *visualization-advertiser*
-             (make-message "visualization_msgs/Marker"
-                           (frame_id header) (cl-tf:frame-id pose-stamped)
-                           (stamp header)  (ros-time)
-                           ns "nxt_lisp"
-                           id 0
-                           type (symbol-code 'visualization_msgs-msg:marker 
-                                             :arrow)
-                           action 0
-                           (x position pose) (cl-tf:x origin)
-                           (y position pose) (cl-tf:y origin)
-                           (z position pose) (cl-tf:z origin)
-                           (x orientation pose) (cl-tf:x orientation)
-                           (y orientation pose) (cl-tf:y orientation)
-                           (z orientation pose) (cl-tf:z orientation)
-                           (w orientation pose) (cl-tf:w orientation)
-                           (x scale) length
-                           (y scale) 0.1
-                           (z scale) 0.1
-                           (a color) 1
-                           (r color) 0
-                           (g color) 1
-                           (b color) 0
-                           lifetime 0))))
-
-;Datei 4.
 
 (defmacro g (field msg)
   `(with-fields ((f ,field))
@@ -221,9 +180,9 @@
   (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0)
                         q))
 
-(defun quaternion->point (q)
+(defun quaternion->point (q x y z)
   (cl-transforms:transform-point (quaternion->tr q) 
-                                 (cl-transforms:make-3d-vector 1 0 0)))
+                                 (cl-transforms:make-3d-vector x y z)))
 
 (defun magnitude (p)
   (sqrt (+ (* (g x p) (g x p))
@@ -235,10 +194,27 @@
            (* (g y p1) (g y p2))
            (* (g z p1) (g z p2)))))
 
-(defun angle-q (q1 q2)
-  (angle (quaternion->point q1)
-         (quaternion->point q2)))
-  
+(defun angle-q (q1 q2 x y z)
+  (angle (quaternion->point q1 x y z)
+         (quaternion->point q2 x y z)))
+
+(defun pitch (q)
+  (let* ((qd (cl-tf:euler->quaternion :ax 0
+                                      :ay 0
+                                      :az 1.57)))
+    (- (angle-q q qd 1 0 0) 1.57)))
+
+(defun roll (q)
+  (let* ((qd (cl-tf:euler->quaternion :ax 0
+                                      :ay 1.57
+                                      :az 0)))
+    (- (angle-q q qd 1 0 0) 1.57)))
+
+(defun yaw (q)
+  (let* ((qd (cl-tf:euler->quaternion :ax 1.57
+                                      :ay 0
+                                      :az 0)))
+    (- (angle-q q qd 0 0 1) 1.57)))  
 
 
 

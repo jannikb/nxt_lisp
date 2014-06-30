@@ -44,4 +44,5 @@
             :components
             ((:file "package")
              ;;(:file "robot-pose" :depends-on ("package"))
-             (:file "nxt-lisp" :depends-on ("package"))))))
+             (:file "nxt-lisp" :depends-on ("package"))
+             (:file "marker" :depends-on ("package"))))))
