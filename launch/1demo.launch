@@ -1,6 +1,6 @@
 <launch>
 
-    <node pkg="tf" type="static_transform_publisher" name="virtual_joint_broadcaster_0" args="0 0 0 0 -1.57 0 odom_combined base_footprint 100" />
+    <node pkg="tf" type="static_transform_publisher" name="virtual_joint_broadcaster_0" args="0 0 0 0 0 0 odom_combined base_footprint 100" />
 
   <include file="$(find suturo_manipulation_pr2_movit)/launch/moveit_rviz.launch">
     <arg name="config" value="true"/>

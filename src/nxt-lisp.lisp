@@ -35,15 +35,17 @@
 (defvar *rotation-vector-sub* nil
   "Subscriber for the rotation-vector")
 
-(defvar *stand* '(0 0 0 0))
-
 (defvar *pub* nil)
 
 (defvar *pubi* nil)
 
-(defparameter *r-wheel* "r_wheel_joint")
+(defparameter *r-wheel* "r_wheel")
 
-(defparameter *l-wheel* "l_wheel_joint")
+(defparameter *l-wheel* "l_wheel")
+
+(defparameter *rudder* "rudder")
+
+(defvar *br* nil)
 
 (defun startup ()
   "Initializes the system."
@@ -54,7 +56,8 @@
         *pub* (advertise "/muh23"
                          "geometry_msgs/PoseStamped")
         *pubi* (advertise "/goal"
-                         "geometry_msgs/PoseStamped")))
+                         "geometry_msgs/PoseStamped")
+        *br* (cl-tf:make-transform-broadcaster)))
 
 (defun set-motor-effort-helper (effort motor)
   (assert *joint-command-pub* 
@@ -73,6 +76,10 @@
   (effort-visualization effort 1)
   (set-motor-effort-helper effort *r-wheel*))
 
+(defun set-rudder-motor-effort (effort)
+  (effort-visualization effort 1)
+  (set-motor-effort-helper effort *rudder*))
+
 (defun set-motor-effort (effort)
   (set-l-motor-effort effort)
   (set-r-motor-effort effort))
@@ -83,7 +90,7 @@
                                      :ay (+ 0 (second rpy))
                                      :az (+ 1.57 (third rpy)))))
     (when *rotation-vector-sub*
-      (unsubscribe *rotation-vector-sub*)
+;      (unsubscribe *rotation-vector-sub*)
       (setf *rotation-vector-sub* nil))
     (setf *rotation-vector-sub*
           (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
@@ -94,7 +101,15 @@
                                    (add-error (magic x y z w qd)
                                               rotation-errors))
                              (control-motor-effort rotation-errors)
-                             (visu x y z w)
+                             (visu-handy)
+;                             (visu x y z w)
+                             (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
+                                                         "/base_footprint"
+;                                                         "/odom_combined"
+                                                         "/asdf"
+                                                         (ros-time)
+                                                         (cl-transforms:make-identity-vector)
+                                                         q))
                              (visu-goal qd))))))))
 ;                             (format t "~a ~a ~a~%" (pitch q) (roll q) (yaw q)))))))))
 
@@ -104,8 +119,9 @@
 
 (defun stop ()
   (set-motor-effort 0)
+  (set-rudder-motor-effort 0)
   (when *rotation-vector-sub*
-    (unsubscribe *rotation-vector-sub*)
+;    (unsubscribe *rotation-vector-sub*)
     (setf *rotation-vector-sub* nil)))
 
 (defun add-error (err err-l)
@@ -119,6 +135,12 @@
             (cl-tf:make-pose-stamped "/base_footprint" 0d0 
                                      (cl-transforms:make-identity-vector) 
                                      q))))
+
+(defun visu-handy ()
+  (publish-visualization-marker-box 
+   (cl-tf:make-pose-stamped "/asdf" 0d0 
+                            (cl-transforms:make-identity-vector) 
+                            (cl-transforms:make-identity-rotation))))
 
 (defun visu (x y z w)
   (publish *pub* 
@@ -140,7 +162,7 @@
     (list x y z)))
 
 (defparameter *kp* -4d0)
-(defparameter *ki* 1d0)
+(defparameter *ki* 0d0)
 (defparameter *kd* 0.5d0)
 
 (defun pid (error-robot-states)

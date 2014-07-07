@@ -1,10 +1,15 @@
 nxt_robot:
   - type: motor
-    name: r_wheel_joint
+    name: r_wheel
     port: PORT_A
     desired_frequency: 20.0
 
   - type: motor
-    name: l_wheel_joint
+    name: l_wheel
     port: PORT_B
+    desired_frequency: 20.0
+
+  - type: motor
+    name: rudder
+    port: PORT_C
     desired_frequency: 20.0
