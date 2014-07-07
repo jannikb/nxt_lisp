@@ -13,3 +13,9 @@ nxt_robot:
     name: rudder
     port: PORT_C
     desired_frequency: 20.0
+
+  - type: touch
+    frame_id: touch_frame
+    name: my_touch_sensor
+    port: PORT_1
+    desired_frequency: 20.0

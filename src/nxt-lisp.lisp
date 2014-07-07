@@ -113,6 +113,21 @@
                              (visu-goal qd))))))))
 ;                             (format t "~a ~a ~a~%" (pitch q) (roll q) (yaw q)))))))))
 
+(defun control-suturobot ()
+    (setf *rotation-vector-sub*
+          (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
+                     #'(lambda (msg) 
+                         (with-fields (x y z w) msg
+                           (let ((q (cl-transforms:make-quaternion x y z w)))
+                             (control-motor-effort q)
+                             (visu-handy)
+                             (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
+                                                         "/base_footprint"
+                                                         "/asdf"
+                                                         (ros-time)
+                                                         (cl-transforms:make-identity-vector)
+                                                         q))))))))
+
 (defun magic (x y z w qd)
 ;  (pitch (cl-transforms:make-quaternion x y z w)))
   (- (angle-q (cl-transforms:make-quaternion x y z w) qd 1 0 0) 1.57 ))
@@ -149,9 +164,13 @@
                                      (cl-transforms:make-identity-vector) 
                                      (cl-transforms:make-quaternion x y z w)))))
   
-(defun control-motor-effort (rotation-errors)
-  (let ((effort (pid rotation-errors)))
-    (set-motor-effort effort)))
+(defun control-motor-effort (q)
+  (let ((fspeed (* 1 (pitch q)))
+        (yspeed (* 0.5 (roll q))))
+    (when (> fspeed 0.6)
+      (set-motor-effort fspeed))
+    (when (> yspeed 0.6)
+      (set-rudder-motor-effort yspeed))))
 
 ;;;2. datei
 
