@@ -35,15 +35,13 @@
 (defvar *rotation-vector-sub* nil
   "Subscriber for the rotation-vector")
 
-(defvar *pub* nil)
-
-(defvar *pubi* nil)
-
 (defparameter *r-wheel* "r_wheel")
 
 (defparameter *l-wheel* "l_wheel")
 
 (defparameter *rudder* "rudder")
+
+(defparameter *min-motor-effort* 0.6)
 
 (defvar *br* nil)
 
@@ -58,6 +56,13 @@
         *pubi* (advertise "/goal"
                          "geometry_msgs/PoseStamped")
         *br* (cl-tf:make-transform-broadcaster)))
+
+(defun stop ()
+  (set-motor-effort 0)
+  (set-rudder-motor-effort 0)
+  (when *rotation-vector-sub*
+;    (unsubscribe *rotation-vector-sub*)
+    (setf *rotation-vector-sub* nil)))
 
 (defun set-motor-effort-helper (effort motor)
   (assert *joint-command-pub* 
@@ -77,12 +82,42 @@
   (set-motor-effort-helper effort *r-wheel*))
 
 (defun set-rudder-motor-effort (effort)
-  (effort-visualization effort 1)
+  (rudder-effort-visualization effort)
   (set-motor-effort-helper effort *rudder*))
 
 (defun set-motor-effort (effort)
   (set-l-motor-effort effort)
   (set-r-motor-effort effort))
+
+(defun control-suturobot ()
+    (setf *rotation-vector-sub*
+          (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
+                     #'(lambda (msg) 
+                         (with-fields (x y z w) msg
+                           (let ((q (cl-transforms:make-quaternion x y z w)))
+                             (control-motor-effort q)
+                             (visu-handy)
+                             (publish-tf-frame q)))))))
+
+(defun publish-tf-frame (q)
+  (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
+                              "/base_footprint"
+                              "/asdf"
+                              (ros-time)
+                              (cl-transforms:make-identity-vector)
+                              q)))
+
+(defun control-motor-effort (q)
+  (let ((fspeed (* 1.3 (pitch q)))
+        (yspeed (* 0.85 (roll q))))
+    (if (or (> fspeed *min-motor-effort*) (< fspeed (- *min-motor-effort*)))
+        (set-motor-effort fspeed)
+        (set-motor-effort 0))
+    (if (or (> yspeed *min-motor-effort*) (< yspeed (- *min-motor-effort*)))
+        (set-rudder-motor-effort yspeed)
+        (set-rudder-motor-effort 0))))
+
+;;;old
 
 (defun keep-balance (rpy)
   (let ((rotation-errors nil)
@@ -102,83 +137,20 @@
                                               rotation-errors))
                              (control-motor-effort rotation-errors)
                              (visu-handy)
-;                             (visu x y z w)
-                             (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
-                                                         "/base_footprint"
-;                                                         "/odom_combined"
-                                                         "/asdf"
-                                                         (ros-time)
-                                                         (cl-transforms:make-identity-vector)
-                                                         q))
+;                            (visu x y z w)
+                             (publish-tf-frame q)
                              (visu-goal qd))))))))
 ;                             (format t "~a ~a ~a~%" (pitch q) (roll q) (yaw q)))))))))
 
-(defun control-suturobot ()
-    (setf *rotation-vector-sub*
-          (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
-                     #'(lambda (msg) 
-                         (with-fields (x y z w) msg
-                           (let ((q (cl-transforms:make-quaternion x y z w)))
-                             (control-motor-effort q)
-                             (visu-handy)
-                             (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
-                                                         "/base_footprint"
-                                                         "/asdf"
-                                                         (ros-time)
-                                                         (cl-transforms:make-identity-vector)
-                                                         q))))))))
 
 (defun magic (x y z w qd)
 ;  (pitch (cl-transforms:make-quaternion x y z w)))
   (- (angle-q (cl-transforms:make-quaternion x y z w) qd 1 0 0) 1.57 ))
 
-(defun stop ()
-  (set-motor-effort 0)
-  (set-rudder-motor-effort 0)
-  (when *rotation-vector-sub*
-;    (unsubscribe *rotation-vector-sub*)
-    (setf *rotation-vector-sub* nil)))
-
 (defun add-error (err err-l)
   (when (> (length err-l) 49)
     (setf err-l (butlast err-l)))
   (push err err-l))
-
-(defun visu-goal (q)
-  (publish *pubi* 
-           (cl-tf:pose-stamped->msg 
-            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
-                                     (cl-transforms:make-identity-vector) 
-                                     q))))
-
-(defun visu-handy ()
-  (publish-visualization-marker-box 
-   (cl-tf:make-pose-stamped "/asdf" 0d0 
-                            (cl-transforms:make-identity-vector) 
-                            (cl-transforms:make-identity-rotation))))
-
-(defun visu (x y z w)
-  (publish *pub* 
-           (cl-tf:pose-stamped->msg 
-            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
-                                     (cl-transforms:make-identity-vector) 
-                                     (cl-transforms:make-quaternion x y z w)))))
-  
-(defun control-motor-effort (q)
-  (let ((fspeed (* 1 (pitch q)))
-        (yspeed (* 0.5 (roll q))))
-    (when (> fspeed 0.6)
-      (set-motor-effort fspeed))
-    (when (> yspeed 0.6)
-      (set-rudder-motor-effort yspeed))))
-
-;;;2. datei
-
-(defun quaternion->rpy (qx qy qz qw)
-  (let* ((y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
-         (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
-         (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
-    (list x y z)))
 
 (defparameter *kp* -4d0)
 (defparameter *ki* 0d0)
@@ -194,20 +166,19 @@
               (/ (reduce #'+ (rest error-robot-states))
                  (1- l)))))))
 
+;;;2. datei
+
+
+(defun quaternion->rpy (qx qy qz qw)
+  (let* ((y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
+         (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
+         (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
+    (list x y z)))
+
 (defmacro g (field msg)
   `(with-fields ((f ,field))
        ,msg
      f))
-
-(defun quaternion->euler (q)
-  (let* ((qw (g w q))
-         (qx (g x q))
-         (qy (g y q))
-         (qz (g z q))
-         (y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
-         (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
-         (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
-    (list x y z)))
     
 (defparameter *pi* 3.14159265359)
 
@@ -224,11 +195,6 @@
 (defun quaternion->point (q x y z)
   (cl-transforms:transform-point (quaternion->tr q) 
                                  (cl-transforms:make-3d-vector x y z)))
-
-(defun magnitude (p)
-  (sqrt (+ (* (g x p) (g x p))
-           (* (g y p) (g y p))
-           (* (g z p) (g z p)))))
 
 (defun angle (p1 p2)
   (acos (+ (* (g x p1) (g x p2))
@@ -250,13 +216,6 @@
                                       :ay 1.57
                                       :az 0)))
     (- (angle-q q qd 1 0 0) 1.57)))
-
-(defun yaw (q)
-  (let* ((qd (cl-tf:euler->quaternion :ax 1.57
-                                      :ay 0
-                                      :az 0)))
-    (- (angle-q q qd 0 0 1) 1.57)))  
-
 
 
 

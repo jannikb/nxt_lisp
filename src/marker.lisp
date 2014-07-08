@@ -33,6 +33,17 @@
 
 (defparameter *visualization-advertiser* nil)
 
+(defvar *pub* nil)
+
+(defvar *pubi* nil)
+
+(defun visu-goal (q)
+  (publish *pubi* 
+           (cl-tf:pose-stamped->msg 
+            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
+                                     (cl-transforms:make-identity-vector) 
+                                     q))))
+
 (defun effort-visualization (effort id)
   (let ((pose-stamped 
           (cl-tf:make-pose-stamped "/odom_combined" 
@@ -42,6 +53,29 @@
                                                             :ay 0
                                                             :az (/ *pi* -2)))))
     (publish-visualization-marker pose-stamped (* 0.2 effort) id)))
+
+(defun rudder-effort-visualization (effort)
+  (let ((pose-stamped 
+          (cl-tf:make-pose-stamped "/odom_combined" 
+                                   0d0 
+                                   (cl-transforms:make-3d-vector 0 0 0.4) 
+                                   (cl-tf:euler->quaternion :ax 0
+                                                            :ay 0
+                                                            :az *pi*))))
+    (publish-visualization-marker pose-stamped (* 0.2 effort) 3)))  
+
+(defun visu-handy ()
+  (publish-visualization-marker-box 
+   (cl-tf:make-pose-stamped "/asdf" 0d0 
+                            (cl-transforms:make-identity-vector) 
+                            (cl-transforms:make-identity-rotation))))
+
+(defun visu (x y z w)
+  (publish *pub* 
+           (cl-tf:pose-stamped->msg 
+            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
+                                     (cl-transforms:make-identity-vector) 
+                                     (cl-transforms:make-quaternion x y z w)))))
 
 (defun publish-visualization-marker (pose-stamped length marker-id)
   (when (not *visualization-advertiser*)
