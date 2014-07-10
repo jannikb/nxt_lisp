@@ -35,6 +35,21 @@
 (defvar *rotation-vector-sub* nil
   "Subscriber for the rotation-vector")
 
+(defvar *spin-sub* nil
+  "Subscriber for the spin-int")
+
+(defvar *bumper-1-sub* nil
+  "Subscriber for a bumper")
+
+(defvar *bumper-2-sub* nil
+  "Subscriber for a bumper")
+
+(defvar *bumper-3-sub* nil
+  "Subscriber for a bumper")
+
+(defvar *bumper-4-sub* nil
+  "Subscriber for a bumper")
+
 (defparameter *r-wheel* "r_wheel")
 
 (defparameter *l-wheel* "l_wheel")
@@ -90,14 +105,27 @@
   (set-r-motor-effort effort))
 
 (defun control-suturobot ()
+  (let ((robot-state (make-instance 'robot-state)))
     (setf *rotation-vector-sub*
           (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
                      #'(lambda (msg) 
                          (with-fields (x y z w) msg
                            (let ((q (cl-transforms:make-quaternion x y z w)))
+                             (set-rotation robot-state q)
+                             
                              (control-motor-effort q)
-                             (visu-handy)
-                             (publish-tf-frame q)))))))
+                             (publish-tf-frame q)
+                             (visu-handy))))))
+    (setf *spin-sub*
+          (subscribe "/spin" "std_msgs/Int8"
+                     #'(lambda (msg)
+                         (set-spin robot-state (g data msg)))))))
+
+(defun sub-bumper (bumper-indicator)
+  (subscribe (format nil "/~a-bumper" bumper-indicator)
+             "nxt_msgs/Contact"
+             #'(lambda (msg)
+                 (set-bumper 'front ()))))
 
 (defun publish-tf-frame (q)
   (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
@@ -118,14 +146,22 @@
         (set-rudder-motor-effort 0))))
 
 (defun control-motor-effort (robot-state)
-  (let ((fspeed (* 1.3 (pitch q)))
-        (yspeed (* 0.85 (roll q))))
-    (if (or (> fspeed *min-motor-effort*) (< fspeed (- *min-motor-effort*)))
-        (set-motor-effort fspeed)
-        (set-motor-effort 0))
-    (if (or (> yspeed *min-motor-effort*) (< yspeed (- *min-motor-effort*)))
-        (set-rudder-motor-effort yspeed)
-        (set-rudder-motor-effort 0))))
+  (let* ((q (rotation robot-state))
+         (fspeed (* 1.3 (pitch q)))
+         (yspeed (* 0.85 (roll q)))
+         (spin (spin robot-state))
+         (r-effort 0)
+         (l-effort 0))
+    (when (or (> fspeed *min-motor-effort*) (< fspeed (- *min-motor-effort*)))
+        (setf r-effort fspeed)
+        (setf l-effort fspeed))
+    (when (or (> yspeed *min-motor-effort*) (< yspeed (- *min-motor-effort*)))
+        (setf (+ r-effort yspeed))
+        (setf (- l-effort yspeed)))
+    (case spin
+      (0 (set-rudder-motor-effort 0))
+      (1 (set-rudder-motor-effort 0.6))
+      (2 (set-rudder-motor-effort -0.6)))))
 
 ;;;old
 
