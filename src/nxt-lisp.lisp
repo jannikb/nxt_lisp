@@ -39,22 +39,28 @@
   "Subscriber for the spin-int")
 
 (defvar *bumper-sub-l* nil
-  "List of subscribers for a bumper")
+  "List of subscribers for the bumpers")
 
-(defvar *joint-state-sub* nil
-  "Subscriber for a bumper")
+(defvar *joint-states-sub* nil
+  "Subscriber for the joint states")
 
-(defparameter *r-wheel* "r_wheel")
+(defparameter *r-wheel* "r_wheel"
+  "Defines the name of the right wheel")
 
-(defparameter *l-wheel* "l_wheel")
+(defparameter *l-wheel* "l_wheel"
+  "Defines the name of the left wheel")
 
-(defparameter *rudder* "rudder")
+(defparameter *rudder* "rudder"
+  "Defines the name of the rudder wheel")
 
-(defparameter *min-motor-effort* 0.6)
+(defparameter *min-motor-effort* 0.6
+  "The minimum effort necessary to get a motor going")
 
-(defvar *br* nil)
+(defvar *br* nil
+  "Transform boardcaster")
 
-(defvar *rs* nil)
+(defvar *rs* nil
+  "global robot-state for debugging")
 
 (defun startup ()
   "Initializes the system."
@@ -69,11 +75,11 @@
         *br* (cl-tf:make-transform-broadcaster)))
 
 (defun stop ()
+  "Stops everything (kinda)"
   (set-motor-effort 0)
   (set-rudder-motor-effort 0)
-  (when *rotation-vector-sub*
-;    (unsubscribe *rotation-vector-sub*)
-    (setf *rotation-vector-sub* nil)))
+  (setf *rotation-vector-sub* nil)
+  (roslisp-utilities:shutdown-ros))
 
 (defun set-motor-effort-helper (effort motor)
   (assert *joint-command-pub* 
@@ -85,22 +91,27 @@
                          :effort effort)))
 
 (defun set-l-motor-effort (effort)
+  "Sets the effort of the left motor"
   (effort-visualization effort 0)
   (set-motor-effort-helper effort *l-wheel*))
 
 (defun set-r-motor-effort (effort)
+  "Sets the effort of the right motor"
   (effort-visualization effort 1)
   (set-motor-effort-helper effort *r-wheel*))
 
 (defun set-rudder-motor-effort (effort)
+  "Sets the effort of the rudder motor"
   (rudder-effort-visualization effort)
   (set-motor-effort-helper effort *rudder*))
 
 (defun set-motor-effort (effort)
+  "Sets the effort of the left and right motor"
   (set-l-motor-effort effort)
   (set-r-motor-effort effort))
 
 (defun control-suturobot ()
+  "Initializes SUTURObot!!!"
   (let ((robot-state (make-instance 'robot-state))) 
     (setf *rs* robot-state)
     (make-thread (lambda ()
@@ -120,16 +131,17 @@
     (setf *spin-sub*
           (subscribe "/spin" "std_msgs/Int8"
                      #'(lambda (msg)
-                         (set-spin robot-state (g data msg)))))
+                         (set-spin robot-state (with-fields (data) msg data)))))
     (setf *bumper-sub-l* (mapcar #'(lambda (indicator)
                                      (sub-bumper robot-state indicator))
                                  '(:front :right :left :back)))
     (setf *joint-state-sub* 
           (subscribe "/joint_states" "sensor_msgs/JointState"
                      (lambda (msg)
-                       (set-rudder-state robot-state (elt (g position msg) 0)) )))))
+                       (set-rudder-state robot-state (elt (with-fields (position) msg position) 0)))))))
 
 (defun in-collision (robot-state)
+  "Check if the given robot-state is in collision"
   (let ((bumpers (bumpers robot-state)))
     (or (getf bumpers :front)
         (getf bumpers :left)
@@ -152,12 +164,15 @@
   nil)
 
 (defun sub-bumper (robot-state bumper-indicator)
+  "This function returns a subscriber for the /'bumper-indicator'_bumper topic, with a
+callback function that updates the bumper state of 'robot-state'."
   (subscribe (format nil "/~a_bumper" bumper-indicator)
              "nxt_msgs/Contact"
              #'(lambda (msg)
                  (set-bumper robot-state bumper-indicator (with-fields (contact) msg contact)))))
 
 (defun publish-tf-frame (q)
+  "This function boardcasts a frame at 0 0 0 in /base_footprint and an orientation of 'q'."
   (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
                               "/base_footprint"
                               "/asdf"
@@ -176,7 +191,7 @@
         (set-rudder-motor-effort 0))))
 
 (defun control-motor-effort (robot-state)
-;  (format t "asdasd")
+  "This function translates a 'robot-state' into motor commands and executes them."
   (let* ((q (rotation robot-state))
          (fspeed (* 1.3 (pitch q)))
          (yspeed (* 0.85 (roll q)))
@@ -192,8 +207,8 @@
       (setf l-effort (- l-effort yspeed)))
     (case spin
       (0 (set-rudder-motor-effort 0))
-      (1 (set-rudder-motor-effort 0.6))
-      (2 (set-rudder-motor-effort -0.6)))
+      (1 (set-rudder-motor-effort -0.6))
+      (2 (set-rudder-motor-effort 0.6)))
     (set-r-motor-effort r-effort)
     (set-l-motor-effort l-effort)))
 
@@ -225,7 +240,7 @@
 
 (defun magic (x y z w qd)
 ;  (pitch (cl-transforms:make-quaternion x y z w)))
-  (- (angle-q (cl-transforms:make-quaternion x y z w) qd 1 0 0) 1.57 ))
+  (- (angle-q (cl-transforms:make-quaternion x y z w) qd) 1.57 ))
 
 (defun add-error (err err-l)
   (when (> (length err-l) 49)
@@ -254,48 +269,49 @@
          (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
          (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
     (list x y z)))
-
-(defmacro g (field msg)
-  `(with-fields ((f ,field))
-       ,msg
-     f))
     
-(defparameter *pi* 3.14159265359)
-
 (defun rpy->tr (r p y)
+  "This function transforms the quaternion defined by the euler angles 'r', 'p', 'y' 
+into a transform located at 0 0 0."
   (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0) 
                         (cl-tf:euler->quaternion :ax r
                                                  :ay p
                                                  :az y)))
 
 (defun quaternion->tr (q)
+  "This function transforms a quaternion 'q' into a transform located at 0 0 0."
   (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0)
                         q))
 
 (defun quaternion->point (q x y z)
+  "This function rotates a point given by 'x', 'y', 'z' by 'q'."
   (cl-transforms:transform-point (quaternion->tr q) 
                                  (cl-transforms:make-3d-vector x y z)))
 
 (defun angle (p1 p2)
+  "This function calculates the angle between to points 'p1' and 'p2'."
   (acos (+ (* (g x p1) (g x p2))
            (* (g y p1) (g y p2))
            (* (g z p1) (g z p2)))))
 
-(defun angle-q (q1 q2 x y z)
-  (angle (quaternion->point q1 x y z)
-         (quaternion->point q2 x y z)))
+(defun angle-q (q1 q2)
+  "This function calculates the angle between the quaternions 'q1' and 'q2'."
+  (angle (quaternion->point q1 1 0 0)
+         (quaternion->point q2 1 0 0)))
 
 (defun pitch (q)
+  "This function extracts the pitch out of the quaternion 'q'."
   (let* ((qd (cl-tf:euler->quaternion :ax 0
                                       :ay 0
                                       :az 1.57)))
-    (- (angle-q q qd 1 0 0) 1.57)))
+    (- (angle-q q qd) 1.57)))
 
 (defun roll (q)
+  "this function extracts the roll out of the quaternion 'q'."
   (let* ((qd (cl-tf:euler->quaternion :ax 0
                                       :ay 1.57
                                       :az 0)))
-    (- (angle-q q qd 1 0 0) 1.57)))
+    (- (angle-q q qd) 1.57)))
 
 
 
