@@ -38,8 +38,8 @@
 (defvar *spin-sub* nil
   "Subscriber for the spin-int")
 
-(defvar *bumper-1-sub* nil
-  "Subscriber for a bumper")
+(defvar *bumper-sub-l* nil
+  "List of subscribers for a bumper")
 
 (defvar *bumper-2-sub* nil
   "Subscriber for a bumper")
@@ -119,13 +119,16 @@
     (setf *spin-sub*
           (subscribe "/spin" "std_msgs/Int8"
                      #'(lambda (msg)
-                         (set-spin robot-state (g data msg)))))))
+                         (set-spin robot-state (g data msg)))))
+    (setf *bumper-sub-l* (mapcar #'(lambda (indicator)
+                                     (sub-bumper robot-state indicator))
+                                 '(:front :right :left :back)))))
 
-(defun sub-bumper (bumper-indicator)
+(defun sub-bumper (robot-state bumper-indicator)
   (subscribe (format nil "/~a-bumper" bumper-indicator)
              "nxt_msgs/Contact"
              #'(lambda (msg)
-                 (set-bumper 'front ()))))
+                 (set-bumper robot-state bumper-indicator (g contact msg)))))
 
 (defun publish-tf-frame (q)
   (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
@@ -156,8 +159,8 @@
         (setf r-effort fspeed)
         (setf l-effort fspeed))
     (when (or (> yspeed *min-motor-effort*) (< yspeed (- *min-motor-effort*)))
-        (setf (+ r-effort yspeed))
-        (setf (- l-effort yspeed)))
+        (setf r-effort (+ r-effort yspeed))
+        (setf l-effort (- l-effort yspeed)))
     (case spin
       (0 (set-rudder-motor-effort 0))
       (1 (set-rudder-motor-effort 0.6))
