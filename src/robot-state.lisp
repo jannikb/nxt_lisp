@@ -45,11 +45,73 @@
    (bumpers :initform '(:front nil :left nil :right nil :back nil)
             :accessor bumpers-acc)
    (bumpers-lock :reader bumpers-lock 
-                 :initform (make-mutex :name "bumpers-lock"))
-   :documentation "blabla"))
+                 :initform (make-mutex :name "bumpers-lock")))
+   (:documentation "blabla"))
 
-(defgeneric rotation (robot-state
+(defgeneric rotation (robot-state)
+  (:documentation ""))
    
+(defgeneric effort-buffer (robot-state)
+  (:documentation ""))
+
+(defgeneric spin (robot-state)
+  (:documentation ""))
+
+(defgeneric bumpers (robot-state)
+  (:documentation ""))
+
+(defgeneric set-rotation (robot-state rotation)
+  (:documentation ""))
+   
+(defgeneric add-to-effort-buffer (robot-state e)
+  (:documentation ""))
+
+(defgeneric set-spin (robot-state spin)
+  (:documentation ""))
+
+(defgeneric set-bumper (robot-state indicator state)
+  (:documentation ""))
+
+(defmethod rotation ((robot-state robot-state))
+  (with-recursive-lock ((rotation-lock robot-state))
+    (rotation-acc robot-state)))
+
+(defmethod effort-buffer ((robot-state robot-state))
+  (with-recursive-lock ((effort-buffer-lock robot-state))
+    (effort-buffer-acc robot-state)))
+
+(defmethod spin ((robot-state robot-state))
+  (with-recursive-lock ((spin-lock robot-state))
+    (spin-acc robot-state)))
+
+(defmethod bumpers ((robot-state robot-state))
+  (with-recursive-lock ((bumpers-lock robot-state))
+    (bumpers-acc robot-state)))
+
+(defmethod set-rotation ((robot-state robot-state) rotation)
+  (with-recursive-lock ((rotation-lock robot-state))
+    (setf (rotation-acc robot-state) rotation)))
+
+(defmethod add-to-effort-buffer ((robot-state robot-state) new-elem)
+  (with-recursive-lock ((effort-buffer-lock robot-state)) 
+    (setf (effort-buffer-acc robot-state) 
+          (push new-elem (if (< (length (effort-buffer-acc robot-state)) 10)
+                             (butlast (effort-buffer-acc robot-state))
+                             (effort-buffer-acc robot-state))))))
+                             
+(defmethod set-spin ((robot-state robot-state) spin)
+  (with-recursive-lock ((spin-lock robot-state))
+    (setf (spin-acc robot-state) spin)))
+
+(defmethod set-bumper ((robot-state robot-state) indicator state)
+  (with-recursive-lock ((bumpers-lock robot-state))
+    (let ((bumpers (bumpers-acc robot-state)))
+      (setf (getf bumpers indicator) state)
+      (setf (bumpers-acc robot-state) bumpers))))
+
+
+
+
 
 (defun wait-for-init-attributes (robot-state)
   "Loops until all the attributes of the robot-state have been initialized"
