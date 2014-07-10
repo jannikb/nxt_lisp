@@ -107,7 +107,17 @@
                               (cl-transforms:make-identity-vector)
                               q)))
 
-(defun control-motor-effort (q)
+(defun control-motor-effort-old (q)
+  (let ((fspeed (* 1.3 (pitch q)))
+        (yspeed (* 0.85 (roll q))))
+    (if (or (> fspeed *min-motor-effort*) (< fspeed (- *min-motor-effort*)))
+        (set-motor-effort fspeed)
+        (set-motor-effort 0))
+    (if (or (> yspeed *min-motor-effort*) (< yspeed (- *min-motor-effort*)))
+        (set-rudder-motor-effort yspeed)
+        (set-rudder-motor-effort 0))))
+
+(defun control-motor-effort (robot-state)
   (let ((fspeed (* 1.3 (pitch q)))
         (yspeed (* 0.85 (roll q))))
     (if (or (> fspeed *min-motor-effort*) (< fspeed (- *min-motor-effort*)))

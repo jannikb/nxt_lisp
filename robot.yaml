@@ -19,3 +19,10 @@ nxt_robot:
     name: my_touch_sensor
     port: PORT_1
     desired_frequency: 20.0
+
+  - type: touch
+    frame_id: touch_frame2
+    name: my_touch_sensor2
+    port: PORT_2
+    desired_frequency: 20.0
+
