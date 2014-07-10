@@ -46,7 +46,7 @@
             :accessor bumpers-acc)
    (bumpers-lock :reader bumpers-lock 
                  :initform (make-mutex :name "bumpers-lock")))
-   (:documentation "blabla"))
+   (:documentation "Describes the state of the robot and its controls"))
 
 (defgeneric rotation (robot-state)
   (:documentation ""))
@@ -110,23 +110,6 @@
       (setf (bumpers-acc robot-state) bumpers))))
 
 
-
-
-
-(defun wait-for-init-attributes (robot-state)
-  "Loops until all the attributes of the robot-state have been initialized"
-  ;; TODO do we need the lock here?
-  (loop until (and (rotation robot-state)
-                   (acceleration robot-state)
-                   (gyroscope robot-state))
-        do (sleep 0.01)))
-
-(defun rotation-callback (robot-state msg)
-  "Callback for the topic with the rotation of the robot that updates 
-   the robot-state."
-  (with-fields (x y z) msg
-    (with-recursive-lock ((rotation-lock robot-state))
-      (setf (rotation robot-state) (list x y z)))))
     
     
                      
