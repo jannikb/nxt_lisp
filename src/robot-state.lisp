@@ -35,7 +35,7 @@
    (rotation-lock :reader rotation-lock 
                   :initform (make-mutex :name "rotation-lock"))
    (effort-buffer :initform nil
-                  :accessor effort-buffer)
+                  :accessor effort-buffer-acc)
    (effort-buffer-lock :reader effort-buffer-lock 
                        :initform (make-mutex :name "effort-buffer-lock"))
    (spin :initform 0
@@ -94,10 +94,11 @@
 
 (defmethod add-to-effort-buffer ((robot-state robot-state) new-elem)
   (with-recursive-lock ((effort-buffer-lock robot-state)) 
-    (setf (effort-buffer-acc robot-state) 
-          (push new-elem (if (< (length (effort-buffer-acc robot-state)) 10)
-                             (butlast (effort-buffer-acc robot-state))
-                             (effort-buffer-acc robot-state))))))
+    (let ((buffer (effort-buffer-acc robot-state)))
+      (when (< (length (effort-buffer-acc robot-state)) 10)
+        (setf buffer (butlast (effort-buffer-acc robot-state))))
+      (push buffer new-elem)
+      (setf (effort-buffer-acc robot-state) buffer))))
                              
 (defmethod set-spin ((robot-state robot-state) spin)
   (with-recursive-lock ((spin-lock robot-state))
