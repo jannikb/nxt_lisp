@@ -30,7 +30,7 @@
 (in-package :nxt-lisp)
 
 (defclass robot-state ()
-  ((rotation :initform nil
+  ((rotation :initform (cl-transforms:make-identity-rotation)
              :accessor rotation-acc)
    (rotation-lock :reader rotation-lock 
                   :initform (make-mutex :name "rotation-lock"))
@@ -42,6 +42,10 @@
          :accessor spin-acc)
    (spin-lock :reader spin-lock 
               :initform (make-mutex :name "spin-lock"))
+   (rudder-state :initform 0
+                 :accessor rudder-state-acc)
+   (rudder-state-lock :reader rudder-state-lock
+                      :initform (make-mutex :name "rudder-state-lock"))
    (bumpers :initform '(:front nil :left nil :right nil :back nil)
             :accessor bumpers-acc)
    (bumpers-lock :reader bumpers-lock 
@@ -57,10 +61,16 @@
 (defgeneric spin (robot-state)
   (:documentation ""))
 
+(defgeneric rudder-state (robot-state)
+  (:documentation ""))
+
 (defgeneric bumpers (robot-state)
   (:documentation ""))
 
 (defgeneric set-rotation (robot-state rotation)
+  (:documentation ""))
+
+(defgeneric set-rudder-state (robot-state rudder-state)
   (:documentation ""))
    
 (defgeneric add-to-effort-buffer (robot-state e)
@@ -87,6 +97,14 @@
 (defmethod bumpers ((robot-state robot-state))
   (with-recursive-lock ((bumpers-lock robot-state))
     (bumpers-acc robot-state)))
+
+(defmethod rudder-state ((robot-state robot-state))
+  (with-recursive-lock ((rudder-state-lock robot-state))
+    (rudder-state-acc robot-state)))
+
+(defmethod set-rudder-state ((robot-state robot-state) rudder-state)
+  (with-recursive-lock ((rudder-state-lock robot-state))
+    (setf (rudder-state-acc robot-state) (/ (mod rudder-state (* 14 pi)) 7))))
 
 (defmethod set-rotation ((robot-state robot-state) rotation)
   (with-recursive-lock ((rotation-lock robot-state))

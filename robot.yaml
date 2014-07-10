@@ -16,13 +16,18 @@ nxt_robot:
 
   - type: touch
     frame_id: touch_frame
-    name: my_touch_sensor
+    name: BACK_bumper
     port: PORT_1
     desired_frequency: 20.0
 
   - type: touch
     frame_id: touch_frame2
-    name: my_touch_sensor2
+    name: RIGHT_bumper
     port: PORT_2
     desired_frequency: 20.0
 
+  - type: touch
+    frame_id: touch_frame3
+    name: FRONT_bumper
+    port: PORT_3
+    desired_frequency: 20.0

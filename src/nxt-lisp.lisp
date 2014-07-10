@@ -41,13 +41,7 @@
 (defvar *bumper-sub-l* nil
   "List of subscribers for a bumper")
 
-(defvar *bumper-2-sub* nil
-  "Subscriber for a bumper")
-
-(defvar *bumper-3-sub* nil
-  "Subscriber for a bumper")
-
-(defvar *bumper-4-sub* nil
+(defvar *joint-state-sub* nil
   "Subscriber for a bumper")
 
 (defparameter *r-wheel* "r_wheel")
@@ -59,6 +53,8 @@
 (defparameter *min-motor-effort* 0.6)
 
 (defvar *br* nil)
+
+(defvar *rs* nil)
 
 (defun startup ()
   "Initializes the system."
@@ -105,15 +101,20 @@
   (set-r-motor-effort effort))
 
 (defun control-suturobot ()
-  (let ((robot-state (make-instance 'robot-state)))
+  (let ((robot-state (make-instance 'robot-state))) 
+    (setf *rs* robot-state)
+    (make-thread (lambda ()
+                   (loop while t
+                         do (if (in-collision robot-state)
+                              (handle-collision robot-state)
+                              (control-motor-effort robot-state))
+                            (sleep 0.1))))
     (setf *rotation-vector-sub*
           (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
                      #'(lambda (msg) 
                          (with-fields (x y z w) msg
                            (let ((q (cl-transforms:make-quaternion x y z w)))
                              (set-rotation robot-state q)
-                             
-                             (control-motor-effort q)
                              (publish-tf-frame q)
                              (visu-handy))))))
     (setf *spin-sub*
@@ -122,13 +123,39 @@
                          (set-spin robot-state (g data msg)))))
     (setf *bumper-sub-l* (mapcar #'(lambda (indicator)
                                      (sub-bumper robot-state indicator))
-                                 '(:front :right :left :back)))))
+                                 '(:front :right :left :back)))
+    (setf *joint-state-sub* 
+          (subscribe "/joint_states" "sensor_msgs/JointState"
+                     (lambda (msg)
+                       (set-rudder-state robot-state (elt (g position msg) 0)) )))))
+
+(defun in-collision (robot-state)
+  (let ((bumpers (bumpers robot-state)))
+    (or (getf bumpers :front)
+        (getf bumpers :left)
+        (getf bumpers :right)
+        (getf bumpers :back))))
+
+(defun set-rudder-position (robot-state rad)
+  (let* ((diff (- rad (rudder-state robot-state)))
+         (dir (or (and (< diff 0) (< diff (- pi)))
+                  (and (> diff 0) (< diff pi))))
+         (effort (if dir 0.7 (- 0.7))))
+    (when (> (abs (- rad (rudder-state robot-state))) 0.05) 
+      (set-rudder-motor-effort effort)
+      (loop while (> (abs (- rad (rudder-state robot-state))) 0.05)
+            do (sleep 0.01))
+      (set-rudder-motor-effort 0))))
+    
+
+(defun handle-collision (robot-state)
+  nil)
 
 (defun sub-bumper (robot-state bumper-indicator)
-  (subscribe (format nil "/~a-bumper" bumper-indicator)
+  (subscribe (format nil "/~a_bumper" bumper-indicator)
              "nxt_msgs/Contact"
              #'(lambda (msg)
-                 (set-bumper robot-state bumper-indicator (g contact msg)))))
+                 (set-bumper robot-state bumper-indicator (with-fields (contact) msg contact)))))
 
 (defun publish-tf-frame (q)
   (cl-tf:send-transform *br* (cl-tf:make-stamped-transform 
@@ -149,22 +176,26 @@
         (set-rudder-motor-effort 0))))
 
 (defun control-motor-effort (robot-state)
+;  (format t "asdasd")
   (let* ((q (rotation robot-state))
          (fspeed (* 1.3 (pitch q)))
          (yspeed (* 0.85 (roll q)))
          (spin (spin robot-state))
          (r-effort 0)
          (l-effort 0))
-    (when (or (> fspeed *min-motor-effort*) (< fspeed (- *min-motor-effort*)))
+    (when (> (abs fspeed) *min-motor-effort*)
         (setf r-effort fspeed)
         (setf l-effort fspeed))
-    (when (or (> yspeed *min-motor-effort*) (< yspeed (- *min-motor-effort*)))
-        (setf r-effort (+ r-effort yspeed))
-        (setf l-effort (- l-effort yspeed)))
+    (when (and (= spin 0) (> (abs yspeed) *min-motor-effort*))
+      (set-rudder-position robot-state 0)
+      (setf r-effort (+ r-effort yspeed))
+      (setf l-effort (- l-effort yspeed)))
     (case spin
       (0 (set-rudder-motor-effort 0))
       (1 (set-rudder-motor-effort 0.6))
-      (2 (set-rudder-motor-effort -0.6)))))
+      (2 (set-rudder-motor-effort -0.6)))
+    (set-r-motor-effort r-effort)
+    (set-l-motor-effort l-effort)))
 
 ;;;old
 
