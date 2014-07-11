@@ -51,7 +51,7 @@
                                    (cl-transforms:make-3d-vector (- 0.5 id) 0.3 0) 
                                    (cl-tf:euler->quaternion :ax 0
                                                             :ay 0
-                                                            :az (/ *pi* -2)))))
+                                                            :az (/ pi -2)))))
     (publish-visualization-marker pose-stamped (* 0.2 effort) id)))
 
 (defun rudder-effort-visualization (effort)
@@ -61,7 +61,7 @@
                                    (cl-transforms:make-3d-vector 0 0 0.4) 
                                    (cl-tf:euler->quaternion :ax 0
                                                             :ay 0
-                                                            :az *pi*))))
+                                                            :az pi))))
     (publish-visualization-marker pose-stamped (* 0.2 effort) 3)))  
 
 (defun visu-handy ()

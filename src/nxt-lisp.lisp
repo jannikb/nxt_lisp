@@ -77,9 +77,8 @@
 (defun stop ()
   "Stops everything (kinda)"
   (set-motor-effort 0)
-  (set-rudder-motor-effort 0)
-  (setf *rotation-vector-sub* nil)
-  (roslisp-utilities:shutdown-ros))
+  (set-rudder-motor-effort 0))
+;  (roslisp-utilities:shutdown-ros))
 
 (defun set-motor-effort-helper (effort motor)
   (assert *joint-command-pub* 
@@ -135,7 +134,7 @@
     (setf *bumper-sub-l* (mapcar #'(lambda (indicator)
                                      (sub-bumper robot-state indicator))
                                  '(:front :right :left :back)))
-    (setf *joint-state-sub* 
+    (setf *joint-states-sub* 
           (subscribe "/joint_states" "sensor_msgs/JointState"
                      (lambda (msg)
                        (set-rudder-state robot-state (elt (with-fields (position) msg position) 0)))))))
@@ -153,7 +152,9 @@
          (dir (or (and (< diff 0) (< diff (- pi)))
                   (and (> diff 0) (< diff pi))))
          (effort (if dir 0.7 (- 0.7))))
-    (when (> (abs (- rad (rudder-state robot-state))) 0.05) 
+;    (format t "diff ~a~%" diff)
+    (when (> (abs (- rad (rudder-state robot-state))) 0.1) 
+      (set-motor-effort 0)
       (set-rudder-motor-effort effort)
       (loop while (> (abs (- rad (rudder-state robot-state))) 0.05)
             do (sleep 0.01))
@@ -161,11 +162,23 @@
     
 
 (defun handle-collision (robot-state)
-  nil)
+  (stop)
+  (let ((bumpers (bumpers robot-state)))
+  (drive-back robot-state 
+              (cond 
+                ((getf bumpers :front) pi)
+                ((getf bumpers :back) 0)
+                ((getf bumpers :left) (/ pi 2))
+                ((getf bumpers :right) (* 1.5 pi))))))
+
+(defun drive-back (robot-state rudder-state)
+  (set-rudder-position robot-state rudder-state)
+  (set-motor-effort 0.7)
+  (sleep 3)
+  (set-motor-effort 0))
 
 (defun sub-bumper (robot-state bumper-indicator)
-  "This function returns a subscriber for the /'bumper-indicator'_bumper topic, with a
-callback function that updates the bumper state of 'robot-state'."
+  "This function returns a subscriber for the /'bumper-indicator'_bumper topic, with a callback function that updates the bumper state of 'robot-state'."
   (subscribe (format nil "/~a_bumper" bumper-indicator)
              "nxt_msgs/Contact"
              #'(lambda (msg)
@@ -180,21 +193,11 @@ callback function that updates the bumper state of 'robot-state'."
                               (cl-transforms:make-identity-vector)
                               q)))
 
-(defun control-motor-effort-old (q)
-  (let ((fspeed (* 1.3 (pitch q)))
-        (yspeed (* 0.85 (roll q))))
-    (if (or (> fspeed *min-motor-effort*) (< fspeed (- *min-motor-effort*)))
-        (set-motor-effort fspeed)
-        (set-motor-effort 0))
-    (if (or (> yspeed *min-motor-effort*) (< yspeed (- *min-motor-effort*)))
-        (set-rudder-motor-effort yspeed)
-        (set-rudder-motor-effort 0))))
-
 (defun control-motor-effort (robot-state)
   "This function translates a 'robot-state' into motor commands and executes them."
   (let* ((q (rotation robot-state))
-         (fspeed (* 1.3 (pitch q)))
-         (yspeed (* 0.85 (roll q)))
+         (fspeed (* -1.3 (pitch q)))
+         (yspeed (* -0.85 (roll q)))
          (spin (spin robot-state))
          (r-effort 0)
          (l-effort 0))
@@ -202,116 +205,15 @@ callback function that updates the bumper state of 'robot-state'."
         (setf r-effort fspeed)
         (setf l-effort fspeed))
     (when (and (= spin 0) (> (abs yspeed) *min-motor-effort*))
-      (set-rudder-position robot-state 0)
+      (set-rudder-position robot-state pi)
       (setf r-effort (+ r-effort yspeed))
       (setf l-effort (- l-effort yspeed)))
     (case spin
       (0 (set-rudder-motor-effort 0))
-      (1 (set-rudder-motor-effort -0.6))
-      (2 (set-rudder-motor-effort 0.6)))
+      (1 (set-rudder-motor-effort 0.8))
+      (2 (set-rudder-motor-effort -0.8)))
     (set-r-motor-effort r-effort)
     (set-l-motor-effort l-effort)))
-
-;;;old
-
-(defun keep-balance (rpy)
-  (let ((rotation-errors nil)
-        (qd (cl-tf:euler->quaternion :ax (+ 0 (first rpy))
-                                     :ay (+ 0 (second rpy))
-                                     :az (+ 1.57 (third rpy)))))
-    (when *rotation-vector-sub*
-;      (unsubscribe *rotation-vector-sub*)
-      (setf *rotation-vector-sub* nil))
-    (setf *rotation-vector-sub*
-          (subscribe "/rotation_sensor" "geometry_msgs/Quaternion"
-                     #'(lambda (msg) 
-                         (with-fields (x y z w) msg
-                           (let ((q (cl-transforms:make-quaternion x y z w)))
-                             (setf rotation-errors 
-                                   (add-error (magic x y z w qd)
-                                              rotation-errors))
-                             (control-motor-effort rotation-errors)
-                             (visu-handy)
-;                            (visu x y z w)
-                             (publish-tf-frame q)
-                             (visu-goal qd))))))))
-;                             (format t "~a ~a ~a~%" (pitch q) (roll q) (yaw q)))))))))
-
-
-(defun magic (x y z w qd)
-;  (pitch (cl-transforms:make-quaternion x y z w)))
-  (- (angle-q (cl-transforms:make-quaternion x y z w) qd) 1.57 ))
-
-(defun add-error (err err-l)
-  (when (> (length err-l) 49)
-    (setf err-l (butlast err-l)))
-  (push err err-l))
-
-(defparameter *kp* -4d0)
-(defparameter *ki* 0d0)
-(defparameter *kd* 0.5d0)
-
-(defun pid (error-robot-states)
-  (let* ((e (first error-robot-states))
-         (l (length error-robot-states)))
-    (+ (* *kp* e) 
-       (* *ki* 
-          (if (= l 1)
-              0
-              (/ (reduce #'+ (rest error-robot-states))
-                 (1- l)))))))
-
-;;;2. datei
-
-
-(defun quaternion->rpy (qx qy qz qw)
-  (let* ((y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
-         (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
-         (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))
-    (list x y z)))
-    
-(defun rpy->tr (r p y)
-  "This function transforms the quaternion defined by the euler angles 'r', 'p', 'y' 
-into a transform located at 0 0 0."
-  (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0) 
-                        (cl-tf:euler->quaternion :ax r
-                                                 :ay p
-                                                 :az y)))
-
-(defun quaternion->tr (q)
-  "This function transforms a quaternion 'q' into a transform located at 0 0 0."
-  (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0)
-                        q))
-
-(defun quaternion->point (q x y z)
-  "This function rotates a point given by 'x', 'y', 'z' by 'q'."
-  (cl-transforms:transform-point (quaternion->tr q) 
-                                 (cl-transforms:make-3d-vector x y z)))
-
-(defun angle (p1 p2)
-  "This function calculates the angle between to points 'p1' and 'p2'."
-  (acos (+ (* (g x p1) (g x p2))
-           (* (g y p1) (g y p2))
-           (* (g z p1) (g z p2)))))
-
-(defun angle-q (q1 q2)
-  "This function calculates the angle between the quaternions 'q1' and 'q2'."
-  (angle (quaternion->point q1 1 0 0)
-         (quaternion->point q2 1 0 0)))
-
-(defun pitch (q)
-  "This function extracts the pitch out of the quaternion 'q'."
-  (let* ((qd (cl-tf:euler->quaternion :ax 0
-                                      :ay 0
-                                      :az 1.57)))
-    (- (angle-q q qd) 1.57)))
-
-(defun roll (q)
-  "this function extracts the roll out of the quaternion 'q'."
-  (let* ((qd (cl-tf:euler->quaternion :ax 0
-                                      :ay 1.57
-                                      :az 0)))
-    (- (angle-q q qd) 1.57)))
 
 
 

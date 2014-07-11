@@ -45,4 +45,5 @@
             ((:file "package")
              (:file "robot-state" :depends-on ("package"))
              (:file "marker" :depends-on ("package"))
-             (:file "nxt-lisp" :depends-on ("package" "marker" "robot-state"))))))
+             (:file "rotation" :depends-on ("package"))
+             (:file "nxt-lisp" :depends-on ("package" "marker" "robot-state" "rotation"))))))
