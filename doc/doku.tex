@@ -98,7 +98,7 @@ Tests mit dem SUTURObot v1 haben ergeben, dass der Lagesensor das Handy selbst, 
   \label{fig:SUTURObot2}
 \end{figure}
 
-\subsection{lösungsansatz + idee} jannik
+\subsection{Idee und Lösungsansatz} jannik
 Nachdem unser SUTURObot v1 aus vorher beschriebenen Gr"unden nicht funktionert hat, mussten wir uns ein neues Konzept ausdenken. Wir wollten dabei m"oglichst viel von unserem bis dahin erstellten Code und Infrastruktur wiederverwenden. Also haben wir uns "uberlegt die bereits bestehende Android-App und Funktionen zur Lagebestimmung des Handys zu verwenden, um den Roboter zu steuern.
 
 Wir haben dazu eine holonome Basis f"ur den Roboter gebaut und die App mit zwei zus"atzlichen Buttons ausgestattet, sodass der Effort der R"ader mittels kippen des Smartphones geregelt werden kann und die Drehung der R"ader mittels Buttonklick. Au"serdem haben wir vier Drucksensoren an den Seiten des Roboters zur Erkennung von Kollisionen angebracht. Sollte es zu einer Kollision kommen soll der Roboter selbst"andig die Bewegung in Richtung des Hindernisses einstellen und ein St"uck von dem Hindernis wegfahren.
@@ -110,12 +110,14 @@ top down
 
 
 
-\subsubsection{sensorik} jannik
+\subsubsection{Sensorik} 
+Simon(Handy teil)\\
 
+Um das Smartphone für die Steuerung nutzten zu können, war es zusätzlich nötig zu bestimmen, wie stark es zur Seite gekippt und um sich selbst gedreht ist. Ersteres berechnen wir analog zu \texttt{pich} mit \texttt{roll}. Die Drehung lies sich jedoch nicht zuverlässig bestimmen, da das Smartphone dafür ein Kompass verwendet, welcher jedoch sehr leicht, etwa durch einen Laptop, abgelenkt wird und daher sehr selten still hält. Wir haben die App daher mit zwei Buttons versehen, welche über ein Topic ihre Betätigung mitteilen. Diese verwenden wir dann um die Räder um sich selbst drehen zu lassen.
 
-Wie schon erwähnt verwenden wir unter anderem wieder das Smartphone um
+Jannik\\
 
-\subsubsection{Visualisierung} simon\\
+\subsubsection{Visualisierung} Simon\\
 Für Debugging Zwecke haben die Datei \texttt{marker.lisp} erstellt, diese enthält Funktionen um die vom Handy empfangenen Daten in Rviz zu visualisieren. Mit den Funktion \texttt{effort-visualization} und \texttt{rudder-effort-visualization} lassen sich die Motorkommandos anzeigen und mit \texttt{visu-handy} wird eine blaue Box verwendet um die Lange des Handys in Rviz darzustellen.
 \begin{figure}[h]
   \begin{center}
@@ -127,10 +129,6 @@ Für Debugging Zwecke haben die Datei \texttt{marker.lisp} erstellt, diese enth�
 \end{figure}
 
 %\includegraphics[scale=1]{asd}
-
-\subsection{Probleme} simon
-
-Wir hatten während der Konstruktion mit der 
 
 \end{document}
 
