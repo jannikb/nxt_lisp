@@ -34,10 +34,6 @@
              :accessor rotation-acc)
    (rotation-lock :reader rotation-lock 
                   :initform (make-mutex :name "rotation-lock"))
-   (effort-buffer :initform nil
-                  :accessor effort-buffer-acc)
-   (effort-buffer-lock :reader effort-buffer-lock 
-                       :initform (make-mutex :name "effort-buffer-lock"))
    (spin :initform 0
          :accessor spin-acc)
    (spin-lock :reader spin-lock 
@@ -50,82 +46,72 @@
             :accessor bumpers-acc)
    (bumpers-lock :reader bumpers-lock 
                  :initform (make-mutex :name "bumpers-lock")))
-   (:documentation "Describes the state of the robot and its controls"))
+   (:documentation "Describes the state of the robot and last inputs."))
 
 (defgeneric rotation (robot-state)
-  (:documentation ""))
-   
-(defgeneric effort-buffer (robot-state)
-  (:documentation ""))
+  (:documentation "Returns the rotation of the handy as a quaternion."))
 
 (defgeneric spin (robot-state)
-  (:documentation ""))
+  (:documentation "Returns the input the robot got on the spin topic."))
 
 (defgeneric rudder-state (robot-state)
-  (:documentation ""))
+  (:documentation "Returns the rotation of the wheels in radian."))
 
 (defgeneric bumpers (robot-state)
-  (:documentation ""))
+  (:documentation "Returns a plist with the position and value of the bumpers."))
 
 (defgeneric set-rotation (robot-state rotation)
-  (:documentation ""))
+  (:documentation "Sets the rotation of the robot-state to the given rotation."))
 
 (defgeneric set-rudder-state (robot-state rudder-state)
-  (:documentation ""))
-   
-(defgeneric add-to-effort-buffer (robot-state e)
-  (:documentation ""))
+  (:documentation "Sets the rudder-state of the robot-state to the given ruddder-state."))
 
 (defgeneric set-spin (robot-state spin)
-  (:documentation ""))
+  (:documentation "Sets the spin of the robot-state to the given spin."))
 
-(defgeneric set-bumper (robot-state indicator state)
-  (:documentation ""))
+(defgeneric set-bumper (robot-state position state)
+  (:documentation "Sets the value of the bumper at the position to state."))
 
 (defmethod rotation ((robot-state robot-state))
+  "Gets the rotation-lock and returns  the robot-state."
   (with-recursive-lock ((rotation-lock robot-state))
     (rotation-acc robot-state)))
 
-(defmethod effort-buffer ((robot-state robot-state))
-  (with-recursive-lock ((effort-buffer-lock robot-state))
-    (effort-buffer-acc robot-state)))
-
 (defmethod spin ((robot-state robot-state))
+  "Gets the spin-lock and returns the spin."
   (with-recursive-lock ((spin-lock robot-state))
     (spin-acc robot-state)))
 
 (defmethod bumpers ((robot-state robot-state))
+  "Gets the bumpers-lock and returns the bumpers."
   (with-recursive-lock ((bumpers-lock robot-state))
     (bumpers-acc robot-state)))
 
 (defmethod rudder-state ((robot-state robot-state))
+  "Gets the rudder-state-lock and returns the rudder-state."
   (with-recursive-lock ((rudder-state-lock robot-state))
     (rudder-state-acc robot-state)))
 
 (defmethod set-rudder-state ((robot-state robot-state) rudder-state)
+  "Gets the rudder-state-lock and sets the rudder-state."
   (with-recursive-lock ((rudder-state-lock robot-state))
     (setf (rudder-state-acc robot-state) (/ (mod rudder-state (* 14 pi)) 7))))
 
 (defmethod set-rotation ((robot-state robot-state) rotation)
+  "Gets the rotation-lock and sets the rotation."
   (with-recursive-lock ((rotation-lock robot-state))
     (setf (rotation-acc robot-state) rotation)))
-
-(defmethod add-to-effort-buffer ((robot-state robot-state) new-elem)
-  (with-recursive-lock ((effort-buffer-lock robot-state)) 
-    (let ((buffer (effort-buffer-acc robot-state)))
-      (when (< (length (effort-buffer-acc robot-state)) 10)
-        (setf buffer (butlast (effort-buffer-acc robot-state))))
-      (push buffer new-elem)
-      (setf (effort-buffer-acc robot-state) buffer))))
                              
 (defmethod set-spin ((robot-state robot-state) spin)
+  "Gets the spin-lock and sets the spin."
   (with-recursive-lock ((spin-lock robot-state))
     (setf (spin-acc robot-state) spin)))
 
-(defmethod set-bumper ((robot-state robot-state) indicator state)
+(defmethod set-bumper ((robot-state robot-state) position state)
+  "Gets the bumpers-lock and set the value of the bumper at the given position."
   (with-recursive-lock ((bumpers-lock robot-state))
     (let ((bumpers (bumpers-acc robot-state)))
-      (setf (getf bumpers indicator) state)
+      (setf (getf bumpers position) state)
       (setf (bumpers-acc robot-state) bumpers))))
 
 
