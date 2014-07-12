@@ -61,8 +61,8 @@ Dokumentation des SUTURObots der im Rahmen des Lisp Tutorials an der Universit"a
 \end{abstract}
 
 \section{einleitung} simon\\
-Im Rahmen eines Lisp Tutorials haben wir mit LEGO Mindstorm Roboter gebaut und dann mit Lisp gesteuert. Es wurde als erstes der SUTURObot v1 \ref{fig:SUTURObot1} gebaut, dieser sollte auf zwei parallel ausgerichteten Rädern stehen können. Für die Bestimmung der Lage sollte ein Smartphone verwendet werden, welches mit einer Android-App die Lage des Handy's ausliest und an das Lisp programm zur verarbeitung sendet.\\
-Da dieser selbst gebaut Sensor für das Vorhaben jedoch zu langsam war, wurde der SUTURObot v2 \ref{fig:SUTURObot2} entwickelt. Dieser hat eine holonome Basis und soll mit der vorher entwickelten Android-App frei bewegt werden können. Zusätzlich sollte er auf Kollisionen reagieren können.
+Im Rahmen eines Lisp Tutorials haben wir mit LEGO Mindstorm Roboter gebaut und dann mit Lisp gesteuert. Es wurde als erstes der SUTURObot v1 \ref{fig:SUTURObot1} gebaut, dieser sollte auf zwei parallel ausgerichteten Rädern balancieren können. Für die Bestimmung der Lage sollte ein Smartphone verwendet werden, welches mit einer Android-App die Lage des Handy's ausliest und an das Lisp programm zur verarbeitung sendet.\\
+Da die Daten des selbst gebaut Sensors für dieses Vorhaben jedoch zu spät ankamen, wurde der SUTURObot v2 \ref{fig:SUTURObot2} entwickelt. Dieser hat eine holonome Basis und soll mit der vorher entwickelten Android-App frei bewegt werden können. Zusätzlich sollte er auf Kollisionen reagieren können.
 
 \section{SUTURObot v1}
 \begin{figure}[h]
@@ -87,7 +87,7 @@ Für unser Vorhaben war es nötig aus dem Quaternion die Neigung zu bestimmen. D
 \end{array} \right)$. Einen davon rotieren wir mit der Quaternion vom Handy. Wenn wir nun den Winkel zwischen beiden bestimmen, erhalten wir die Neigung. Da jedoch mit diesem Verfahren sowohl eine Vorwärts-, als auch eine Rückwärtsneigung einen positiven Winkel liefert, neigen wir den zweiten Vektor vor der Winkelbestimmung um $pi / 2$. Wenn wir dann von der gewonnenen Neigung $pi / 2$ abziehen, kann man zwischen einer Vorwärts- und Rückwärtsneigung anhand des Vorzeichens unterscheiden.
 
 \subsection{Probleme} simon\\
-Tests mit dem SUTURObot v1 haben ergeben, dass der Lagesensor das Handy selbst, oder auch die Datenübertragung zu viel Zeit in Anspruch nimmt, um mit den Motoren einem Stürz rechtzeitig entgegen wirken zu können. Da uns leider kein weiteres Handy mit den passenden Sensoren zu Verfügung stand, um den die erste Fehlerquelle auszuschließen, haben wir uns schweren Herzens dafür entschlossen, stattdessen den SUTURObot v2 zu entwickeln.
+Tests mit dem SUTURObot v1 haben ergeben, dass der Lagesensor das Handy selbst, oder auch die Datenübertragung zu viel Zeit in Anspruch nimmt, um mit den Motoren einem Stürz rechtzeitig entgegen wirken zu können. Da uns leider kein weiteres Handy mit den passenden Sensoren zu Verfügung stand, um den die erste Fehlerquelle auszuschließen, haben wir uns dafür entschlossen, stattdessen den SUTURObot v2 zu entwickeln.
 
 \section{SUTURObot v2}
 \begin{figure}[h]
