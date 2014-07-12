@@ -30,6 +30,7 @@
 (in-package :nxt-lisp)
 
 (defun quaternion->rpy (qx qy qz qw)
+  "This function returns the euler angles of a quaternion given by (qx qy qz qw)."
   (let* ((y (- (asin (- (* 2 qx qz) (* 2 qy qw)))))
          (z (atan (- (* 2 qy qx) (* 2 qw qz)) (- 1 (* 2 qy qy) (* 2 qz qz))))
          (x (atan (- (* 2 qx qw) (* 2 qy qz)) (- 1 (* 2 qx qx) (* 2 qy qy)))))

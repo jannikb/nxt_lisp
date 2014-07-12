@@ -68,18 +68,19 @@
   (setf *joint-command-pub*
         (advertise "/joint_command"
                    "nxt_msgs/JointCommand")
-        *pub* (advertise "/muh23"
+        *pub* (advertise "/current-position"
                          "geometry_msgs/PoseStamped")
         *pubi* (advertise "/goal"
                          "geometry_msgs/PoseStamped")
         *br* (cl-tf:make-transform-broadcaster)))
 
 (defun stop ()
-  "Stops everything (kinda)"
+  "Stops everything (kinda)."
   (set-motor-effort 0)
   (set-rudder-motor-effort 0))
 
 (defun set-motor-effort-helper (effort motor)
+  "This function sends the 'effort' to the 'motor'."
   (when (> (abs effort) *min-motor-effort*) ;the motors will make an unpleasant noise, when the effort is too low
     (setf effort 0))
   (assert *joint-command-pub* 
@@ -91,30 +92,30 @@
                          :effort effort)))
 
 (defun set-l-motor-effort (effort)
-  "Sets the effort of the left motor"
+  "This function sets the effort of the left motor."
   (effort-visualization effort 0) 
   (set-motor-effort-helper effort *l-wheel*))
 
 (defun set-r-motor-effort (effort)
-  "Sets the effort of the right motor"
+  "This function sets the effort of the right motor."
   (effort-visualization effort 1)
   (set-motor-effort-helper effort *r-wheel*))
 
 (defun set-rudder-motor-effort (effort)
-  "Sets the effort of the rudder motor"
+  "This function sets the effort of the rudder motor."
   (rudder-effort-visualization effort)
   (set-motor-effort-helper effort *rudder*))
 
 (defun set-motor-effort (effort)
-  "Sets the effort of the left and right motor"
+  "This function sets the effort of the left and right motor."
   (set-l-motor-effort effort)
   (set-r-motor-effort effort))
 
 (defun control-suturobot ()
   "Initializes SUTURObot!!!"
   (let ((robot-state (make-instance 'robot-state))) 
-    (setf *rs* robot-state)
-    (make-thread (lambda ()
+    (setf *rs* robot-state) ;for debugging purposes
+    (make-thread (lambda () 
                    (loop while t
                          do (if (in-collision robot-state)
                               (handle-collision robot-state)
@@ -184,6 +185,7 @@
                 ((getf bumpers :right) (* 1.5 pi))))))
 
 (defun drive-back (robot-state rudder-state)
+  "This function sets the rudder into 'rudder-state' and drive back a little."
   (set-rudder-position robot-state rudder-state)
   (set-motor-effort 0.7)
   (sleep 3)
@@ -226,16 +228,18 @@
     (set-r-motor-effort r-effort)
     (set-l-motor-effort l-effort)))
 
-(defparameter *kp* -4d0)
-(defparameter *ki* 0d0)
-(defparameter *kd* 0.5d0)
-
 (defun add-error (err err-l)
+  "This function adds 'err' to 'err-l' and removes 'err-l's last element, if it is longer then 9."
   (when (> (length err-l) 9)
     (setf err-l (butlast err-l)))
   (push err err-l))
 
+(defparameter *kp* -4d0)
+(defparameter *ki* 0d0)
+(defparameter *kd* 0.5d0)
+
 (defun pid (error-robot-states)
+  "This function is a pi controller, the first element of 'error-robot-states' is the last measurement."
   (let* ((e (first error-robot-states))
          (l (length error-robot-states)))
     (+ (* *kp* e)
