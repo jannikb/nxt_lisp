@@ -30,16 +30,16 @@
 (in-package :nxt-lisp)
 
 (defvar *joint-command-pub* nil
-  "Advertiser for the joint_command-topic")
+  "Advertiser for the joint_command topic")
 
 (defvar *rotation-vector-sub* nil
-  "Subscriber for the rotation-vector")
+  "Subscriber for the rotation-vector topic")
 
 (defvar *spin-sub* nil
-  "Subscriber for the spin-int")
+  "Subscriber for the spin topic")
 
 (defvar *bumper-sub-l* nil
-  "List of subscribers for the bumpers")
+  "List of subscribers for the bumper topics")
 
 (defvar *joint-states-sub* nil
   "Subscriber for the joint states")
@@ -60,7 +60,7 @@
   "Transform boardcaster")
 
 (defvar *rs* nil
-  "global robot-state for debugging")
+  "Global robot-state for debugging. Do NOT use this in the code.")
 
 (defun startup ()
   "Initializes the system."
@@ -78,7 +78,6 @@
   "Stops everything (kinda)"
   (set-motor-effort 0)
   (set-rudder-motor-effort 0))
-;  (roslisp-utilities:shutdown-ros))
 
 (defun set-motor-effort-helper (effort motor)
   (assert *joint-command-pub* 
@@ -152,7 +151,6 @@
          (dir (or (and (< diff 0) (< diff (- pi)))
                   (and (> diff 0) (< diff pi))))
          (effort (if dir 0.7 (- 0.7))))
-;    (format t "diff ~a~%" diff)
     (when (> (abs (- rad (rudder-state robot-state))) 0.1) 
       (set-motor-effort 0)
       (set-rudder-motor-effort effort)
