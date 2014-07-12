@@ -106,16 +106,26 @@ Wir haben dazu eine holonome Basis f"ur den Roboter gebaut und die App mit zwei 
 \subsection{architektur}
 top down
 
-\subsubsection{allgemein} jannik
+\subsubsection{Allgemein}
+In unserem Kontrollprogramm "uberpr"ufen wir in einer Schleife, ob eine Kollision erkannt wurde oder nicht. Wurde keine Kollision erkannt, wird die funktion zur Steuerung des Roboter ausgef"uhrt. Diese berechnet aus der Drehung des Handys, um die x-Achse wie stark der Effort auf den Antriebsmotoren sein soll, und aus der Drehung, um die y-Achse die Differenz zwischen den Efforts der beiden Motoren. Unterschreitet der Effort den Mindestwert, der ben"otigt ist zum Antreiben der Motoren, wird keine Effort an die Motoren gegeben. Die Drehung um die y-Achse erfordert ebenfalls einen Mindestwert, damit es einfacher ist gerade aus zu fahren. Sollten die R"ader nicht gerade aus zeigen und eine es wurde eine Differenz zwischen den Antriebsmotoren angegeben, werden diese bevor der Effort an die Antriebsmotoren gegeben gerade ausgerichtet. Dies erm"oglicht den Roboter schon gerade aus und Kurven zu fahren, bzw. sich auf der Stelle zu drehen.
 
+Wird einer der beiden Buttons auf dem Handy gedr"uckt, wird abh"angig vom Button ein Effort auf den Drehmotor gelegt. Geschieht dies, wird immer auf beiden Antriebsmotoren der gleiche Effort angelegt, da durch unsere Konstruktion des Roboters es sonst vorkommen k"onnte, dass sich beide R"ader aufeinander zu drehen, bzw voneinader weg.
+  
+Kommt es zu einer Kollision werden die R"ader von der Seite auf der die Kollision geschehen ist weggedreht und es wird f"ur eine kurze Zeit ein Effort auf beide Antriebsmotoren gelegt. Danach geht es mit der normalen Schleife weiter.
 
+ 
+\subsection{Repres"antation des Roboterzustandes}
+Im Gegensatz zum SUTURObot v1 bekommt der SUTURObot v2 Sensordaten von mehr als einer Quelle. Deshalb ist es nicht mehr praktikabel direkt im Callback der Sensordaten, die Motoren des Roboters zu steuern, da alle Sensordaten mit unterschiedlichen und zum Teil variierende Frequenzen gepublisht werden. Damit wir also Entscheidungen treffen k"onnen die alle aktuellen Sensordaten einbeziehen, ohne dabei auf die Frequenzen der Sensordaten angewiesen zu sein, werden alle Entscheidungen, die das Verhalten des Roboters bestimmen, in einem eigenen Thread gemacht. Um trotzdem auf die Sensordaten zugreifen zu k"onnen, ohne globale Variablen verwenden zu m"ussen, haben wir eine Klasse \texttt{robot-state} angelegt, die alle Sensordaten als Attribute enth"alt. Zur Vermeidung von Problemen mit Nebenl"aufigkeit hat jedes Attribut sein eigenes Lock und alle Methoden zum Zugriff auf die Attribute sind durch die Locks gesichert, somit k"onnen wir dann in unserem Kontrollprogramm direkt auf die Attribute zugreifen. 
 
 \subsubsection{Sensorik} 
 Simon(Handy teil)\\
 
 Um das Smartphone für die Steuerung nutzten zu können, war es zusätzlich nötig zu bestimmen, wie stark es zur Seite gekippt und um sich selbst gedreht ist. Ersteres berechnen wir analog zu \texttt{pich} mit \texttt{roll}. Die Drehung lies sich jedoch nicht zuverlässig bestimmen, da das Smartphone dafür ein Kompass verwendet, welcher jedoch sehr leicht, etwa durch einen Laptop, abgelenkt wird und daher sehr selten still hält. Wir haben die App daher mit zwei Buttons versehen, welche über ein Topic ihre Betätigung mitteilen. Diese verwenden wir dann um die Räder um sich selbst drehen zu lassen.
 
-Jannik\\
+Jeder Drucksensor hat sein eigenes Topic auf dem er einen Boolean publisht, der true ist falls der Sensor eingedr"uckt wurde. Da alle vier Sensoren bis auf den Topicnamen identisch sind, habne wir eine Funktion erstellt, die die Position (front, left, right, back) nimmt und auf das zugeh"orige Topic subscribt. Der \texttt{robot-state} enth"alt eine pList mit den Positionen und den entsprechenden Werten der Drucksensoren, welche bei jedem Callback aktualisiert wird.
+
+"Uber das \texttt{joint\_states} Topic erfahren wir den Stand der Motoren, dabei ist eine Umdrehung des Motors im Uhrzeigersinn 2*pi. Die Antriebsmotoren interssieren uns dabei nicht aber wir brauchen den Stand des Drehmotors, um zu "uberpr"ufen wie unsere R"ader gedreht sind. Durch die "Ubersetzung des Motors auf die Drehung der R"ader braucht es 7 Motorumdrehungen f"ur eine Drehung des Rades. Wir k"onnen also mit 
+\( (motorstate \bmod 14pi) / 7 \) die Drehung der R"ader bestimmen.
 
 \subsubsection{Visualisierung} Simon\\
 Für Debugging Zwecke haben die Datei \texttt{marker.lisp} erstellt, diese enthält Funktionen um die vom Handy empfangenen Daten in Rviz zu visualisieren. Mit den Funktion \texttt{effort-visualization} und \texttt{rudder-effort-visualization} lassen sich die Motorkommandos anzeigen und mit \texttt{visu-handy} wird eine blaue Box verwendet um die Lange des Handys in Rviz darzustellen.
