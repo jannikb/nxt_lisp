@@ -157,6 +157,10 @@
       (loop while (> (abs (- rad (rudder-state robot-state))) 0.05)
             do (sleep 0.01))
       (set-rudder-motor-effort 0))))
+
+(defun set-rudder-position-with-pid (robot-state rad)
+  (let* ((current-position (rudder-state robot-state)))
+    (set-rudder-motor-effort (pid ))))
     
 
 (defun handle-collision (robot-state)
@@ -212,6 +216,20 @@
       (2 (set-rudder-motor-effort -0.8)))
     (set-r-motor-effort r-effort)
     (set-l-motor-effort l-effort)))
+
+(defparameter *kp* -4d0)
+(defparameter *ki* 0d0)
+(defparameter *kd* 0.5d0)
+
+(defun pid (error-robot-states)
+  (let* ((e (first error-robot-states))
+         (l (length error-robot-states)))
+    (+ (* *kp* e)
+       (* *ki*
+          (if (= l 1)
+              0
+              (/ (reduce #'+ (rest error-robot-states))
+                 (1- l)))))))
 
 
 
