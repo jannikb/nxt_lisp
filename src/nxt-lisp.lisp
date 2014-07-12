@@ -80,6 +80,8 @@
   (set-rudder-motor-effort 0))
 
 (defun set-motor-effort-helper (effort motor)
+  (when (> (abs effort) *min-motor-effort*) ;the motors will make an unpleasant noise, when the effort is too low
+    (setf effort 0))
   (assert *joint-command-pub* 
           (*joint-command-pub*)
           "The advertiser for joint_command wasn't initialized.~%Call startup first.")
@@ -90,7 +92,7 @@
 
 (defun set-l-motor-effort (effort)
   "Sets the effort of the left motor"
-  (effort-visualization effort 0)
+  (effort-visualization effort 0) 
   (set-motor-effort-helper effort *l-wheel*))
 
 (defun set-r-motor-effort (effort)
@@ -147,6 +149,7 @@
         (getf bumpers :back))))
 
 (defun set-rudder-position (robot-state rad)
+  "This function moves the rudder into the specified position."
   (let* ((diff (- rad (rudder-state robot-state)))
          (dir (or (and (< diff 0) (< diff (- pi)))
                   (and (> diff 0) (< diff pi))))
@@ -158,12 +161,19 @@
             do (sleep 0.01))
       (set-rudder-motor-effort 0))))
 
-(defun set-rudder-position-with-pid (robot-state rad)
-  (let* ((current-position (rudder-state robot-state)))
-    (set-rudder-motor-effort (pid ))))
-    
+(defun set-rudder-position-with-pid (robot-state goal)
+  "This function moves the rudder into the specified position."
+  (let* ((current-error (- goal (rudder-state robot-state)))
+         (error-list '()))
+    (loop while (> (abs current-error) 0.05)
+          do (add-error current-error error-list)
+             (set-rudder-motor-effort (pid error-list))
+             (sleep 0.01)
+             (set-rudder-motor-effort 0)
+             (setf current-error (- goal (rudder-state robot-state))))))
 
 (defun handle-collision (robot-state)
+  "This function is called when a collision occurs."
   (stop)
   (let ((bumpers (bumpers robot-state)))
   (drive-back robot-state 
@@ -198,16 +208,15 @@
 (defun control-motor-effort (robot-state)
   "This function translates a 'robot-state' into motor commands and executes them."
   (let* ((q (rotation robot-state))
-         (fspeed (* -1.3 (pitch q)))
+         (fspeed (* -1.3 (pitch q))) 
          (yspeed (* -0.85 (roll q)))
          (spin (spin robot-state))
          (r-effort 0)
          (l-effort 0))
-    (when (> (abs fspeed) *min-motor-effort*)
-        (setf r-effort fspeed)
-        (setf l-effort fspeed))
-    (when (and (= spin 0) (> (abs yspeed) *min-motor-effort*))
-      (set-rudder-position robot-state pi)
+    (setf r-effort fspeed)
+    (setf l-effort fspeed)
+    (when (= spin 0)
+      (set-rudder-position-with-pid robot-state pi)
       (setf r-effort (+ r-effort yspeed))
       (setf l-effort (- l-effort yspeed)))
     (case spin
@@ -220,6 +229,11 @@
 (defparameter *kp* -4d0)
 (defparameter *ki* 0d0)
 (defparameter *kd* 0.5d0)
+
+(defun add-error (err err-l)
+  (when (> (length err-l) 9)
+    (setf err-l (butlast err-l)))
+  (push err err-l))
 
 (defun pid (error-robot-states)
   (let* ((e (first error-robot-states))
