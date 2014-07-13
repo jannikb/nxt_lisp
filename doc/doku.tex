@@ -83,13 +83,13 @@ Der Quellcode ist verfügbar unter \cite{Code}.
 
 \subsection{Idee und Lösungsansatz} 
 \secauthor{Simon}
-Wir haben uns am Anfang dafür entschieden einen Roboter zu bauen, der auf zwei parallel stehenden Rädern balancieren und fahren kann. Dafür benötigten wir passende Sensor, um die Lage des Roboters zu bestimmen. Da uns kein Gyrosensor von Lego zu Verfügung stand und die Daten aus dem Ultraschallsensor zu stark mit Rauschen belastet waren, haben wir uns dafür entscheiden, den Lagesensor eines Smartphones zu verwenden. Unsere grundlegende Idee war es dann aus der Lage den Fehler zu bestimmen und mit einem PID-Controller die Balance zu halten bzw zu fahren. Von Balancieren sollte zum Fahren gewechselt werden, indem mittels des PID-Controllers eine leicht gekippte Haltung eingenommen wird.
+Wir haben uns am Anfang dafür entschieden einen Roboter zu bauen, der auf zwei parallel stehenden Rädern balancieren und fahren kann. Dafür benötigten wir passende Sensor, um die Lage des Roboters zu bestimmen. Da uns kein Gyrosensor von Lego zu Verfügung stand und die Daten aus dem Ultraschallsensor zu stark mit Rauschen belastet waren, haben wir uns dafür entscheiden, den Lagesensor eines Smartphones zu verwenden. Unsere grundlegende Idee war es dann aus der Lage den Fehler zu bestimmen und mit einem PI-Controller die Balance zu halten bzw zu fahren. Von Balancieren sollte zum Fahren gewechselt werden, indem mittels des PI-Controllers eine leicht gekippte Haltung eingenommen wird.
 
 \subsection{Architektur}
 
 \subsubsection{Allgemein} 
 \secauthor{Jannik}
-In dem Callback des Lagesensors berechnen wir den Fehler unserer momentanen Lage, also die Differenz zwischen der von dem Lagesensor erhaltenen Lage und unserer gew"unschten Lage, und geben diese in einer Liste mit den letzten 10 Fehlern an den PI-Controller. Das Erbgeniss des PI-Controllers geben wir dann als Effort an die Antriebsmotoren und zusammen mit der Lage an die Visualisierung.
+In dem Callback des Lagesensors berechnen wir den Fehler unserer momentanen Lage, also die Differenz zwischen der von dem Lagesensor erhaltenen Lage und unserer gew"unschten Lage und geben diese in einer Liste mit den letzten 10 Fehlern an den PI-Controller. Das Ergebnis des PI-Controllers geben wir dann als Effort an die Antriebsmotoren und zusammen mit der Lage an die Visualisierung.
 
 
 \subsubsection{Sensorik} 

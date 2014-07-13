@@ -27,7 +27,7 @@
 ;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ;;; POSSIBILITY OF SUCH DAMAGE.
 
-;;;It is not possible to 
+;;;This file was written by Jannik and Simon together during meetings.
 
 (in-package :nxt-lisp)
 
