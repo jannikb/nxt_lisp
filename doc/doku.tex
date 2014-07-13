@@ -11,6 +11,9 @@
 \usepackage[a4paper,top=2cm,left=4cm,right=4cm,bottom=2cm,marginparwidth=5cm]{geometry}
 \usepackage{marginnote}
 \usepackage[automark]{scrpage2}
+% Externe PDF's einbinden können
+\usepackage{pdflscape}
+\usepackage[final]{pdfpages}
 \pagestyle{scrheadings}
 
 \newcommand{\secauthor}[1]{\textbf{Autor(en) dieses Kapitels: {#1}}\\}
@@ -29,7 +32,7 @@
 \newcommand{\groupno}{\@empty}
 
 \newcommand{\course}[2]{\renewcommand{\coursename}{#1}\renewcommand{\groupno}{#2}}
-\newcommand{\beginsheet}{\clearscrheadfoot\ihead[]{Kurs: \coursename}\ohead[]{Gruppe \groupno}\ofoot[]{\pagemark}\ifoot[]{Dieses Dokument ist Teil der Dokumentation}}
+\newcommand{\beginsheet}{\clearscrheadfoot\ihead[]{Kurs: \coursename}\ohead[]{Gruppe \groupno}\ofoot[]{\pagemark}\ifoot[]{}}
 
 \newcommand{\email}[1]{\href{mailto:#1}{#1}}
 
@@ -86,6 +89,7 @@ Wir haben uns am Anfang dafür entschieden einen Roboter zu bauen, der auf zwei 
 
 \subsubsection{Allgemein} 
 \secauthor{Jannik}
+In dem Callback des Lagesensors berechnen wir den Fehler unserer momentanen Lage, also die Differenz zwischen der von dem Lagesensor erhaltenen Lage und unserer gew"unschten Lage, und geben diese in einer Liste mit den letzten 10 Fehlern an den PI-Controller. Das Erbgeniss des PI-Controllers geben wir dann als Effort an die Antriebsmotoren und zusammen mit der Lage an die Visualisierung.
 
 
 \subsubsection{Sensorik} 
@@ -96,7 +100,7 @@ Für unser Vorhaben war es nötig aus dem Quaternion die Neigung zu bestimmen. D
 
 \subsection{Probleme} 
 \secauthor{Simon}
-Tests mit dem SUTURObot v1 haben ergeben, dass der Lagesensor das Handy selbst, oder auch die Datenübertragung zu viel Zeit in Anspruch nimmt, um mit den Motoren einem Stürz rechtzeitig entgegen wirken zu können. Da uns leider kein weiteres Handy mit den passenden Sensoren zu Verfügung stand, um den die erste Fehlerquelle auszuschließen, haben wir uns dafür entschlossen, stattdessen den SUTURObot v2 zu entwickeln.
+Tests mit dem SUTURObot v1 haben ergeben, dass der Lagesensor, das die Daten"ubertragung vom Handy zum Laptop oder die Datenübertragung vom Laptop zum Brick zu viel Zeit in Anspruch nimmt, um mit den Motoren einem Sturz rechtzeitig entgegen wirken zu können. Da uns leider kein weiteres Handy mit den passenden Sensoren zur Verfügung stand, um die erste Fehlerquelle auszuschließen, haben wir uns dafür entschlossen, stattdessen den SUTURObot v2 zu entwickeln.
 
 \section{SUTURObot v2}
 \begin{figure}[h]
@@ -113,15 +117,15 @@ Nachdem unser SUTURObot v1 aus vorher beschriebenen Gr"unden nicht funktionert h
 
 Wir haben dazu eine holonome Basis f"ur den Roboter gebaut und die App mit zwei zus"atzlichen Buttons ausgestattet, sodass der Effort der R"ader mittels kippen des Smartphones geregelt werden kann und die Drehung der R"ader mittels Buttonklick. Au"serdem haben wir vier Drucksensoren an den Seiten des Roboters zur Erkennung von Kollisionen angebracht. Sollte es zu einer Kollision kommen soll der Roboter selbst"andig die Bewegung in Richtung des Hindernisses einstellen und ein St"uck von dem Hindernis wegfahren.
 
-\subsection{architektur}
+\subsection{Architektur}
 
 \subsubsection{Allgemein}
 \secauthor{Jannik}
-In unserem Kontrollprogramm "uberpr"ufen wir in einer Schleife, ob eine Kollision erkannt wurde oder nicht. Wurde keine Kollision erkannt, wird die funktion zur Steuerung des Roboter ausgef"uhrt. Diese berechnet aus der Drehung des Handys um die x-Achse wie stark der Effort auf den Antriebsmotoren sein soll, und aus der Drehung um die y-Achse die Differenz zwischen den Efforts der beiden Motoren. Unterschreitet der Effort den Mindestwert, der ben"otigt ist zum Antreiben der Motoren, wird keine Effort an die Motoren gegeben. Die Drehung um die y-Achse erfordert ebenfalls einen Mindestwert, damit es einfacher ist gerade aus zu fahren. Sollten die R"ader nicht gerade aus zeigen und es wurde eine Differenz zwischen den Antriebsmotoren angegeben, werden diese, bevor der Effort an die Antriebsmotoren gegeben wird, gerade ausgerichtet. Dies erm"oglicht den Roboter schon gerade aus und Kurven zu fahren, bzw. sich auf der Stelle zu drehen.
+In unserem Kontrollprogramm "uberpr"ufen wir in einer Schleife, ob eine Kollision erkannt wurde oder nicht. Wurde keine Kollision erkannt, wird die funktion zur Steuerung des Roboter ausgef"uhrt. Diese berechnet aus der Drehung des Handys um die x-Achse wie stark der Effort auf den Antriebsmotoren sein soll, und aus der Drehung um die y-Achse die Differenz zwischen den Efforts der beiden Motoren. Unterschreitet der Effort den Mindestwert, der ben"otigt ist zum Antreiben der Motoren, wird keine Effort an die Motoren gegeben. Die Drehung um die y-Achse erfordert ebenfalls einen Mindestwert, damit es einfacher ist gerade aus zu fahren. Sollten die R"ader nicht geradeaus zeigen und es wurde eine Differenz zwischen den Antriebsmotoren angegeben, werden diese, bevor der Effort an die Antriebsmotoren gegeben wird, gerade ausgerichtet. Zum Drehen der R"ader verwenden wir einen PI-Controller, da es ohne oft zum "ubersteuern kam oder der Effort zu gering war die dicken LEGO-R"ader zu drehen. Dies erm"oglicht den Roboter schon gerade aus und Kurven zu fahren, bzw. sich auf der Stelle zu drehen.
 
 Wird einer der beiden Buttons auf dem Handy gedr"uckt, wird abh"angig vom Button ein Effort auf den Drehmotor gelegt. Geschieht dies, wird immer auf beiden Antriebsmotoren der gleiche Effort angelegt, da durch unsere Konstruktion des Roboters es sonst vorkommen k"onnte, dass sich beide R"ader aufeinander zu drehen, bzw voneinader weg.
   
-Kommt es zu einer Kollision werden die R"ader von der Seite auf der die Kollision geschehen ist weggedreht und es wird f"ur eine kurze Zeit ein Effort auf beide Antriebsmotoren gelegt. Danach geht es mit der normalen Schleife weiter.
+Kommt es zu einer Kollision werden die R"ader von der Seite auf der die Kollision geschehen ist weggedreht und es wird f"ur eine kurze Zeit ein Effort auf beide Antriebsmotoren gelegt. Danach geht es mit der normalen Schleife weiter. 
 
  
 \subsubsection{Repres"antation des Roboterzustandes}
@@ -158,6 +162,12 @@ Für Debugging Zwecke haben die Datei \texttt{marker.lisp} erstellt, diese enth�
   \url{https://github.com/jannikb/nxt\_lisp}.
 
 \end{thebibliography}
+
+\section*{Anhang}
+\includepdfset{pages=-,noautoscale}
+\subsection*{Projekt "Ubersicht}
+\includepdf{./project-sheet.pdf}
+
 \end{document}
 
 
