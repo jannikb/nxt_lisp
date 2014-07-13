@@ -53,11 +53,11 @@
 \date{13.07.2014}
 \maketitle
 
-\newpage
+%\newpage
 
-\tableofcontents
+%\tableofcontents
 
-\newpage
+%\newpage
 
 \begin{abstract}
 Dokumentation des SUTURObots der im Rahmen des Lisp Tutorials an der Universit"at Bremen erstellt wurde. Zur Konstruktion des Roboters wurde ein LEGO Mindstorm verwendet, der mittels eines Smartphones gesteurt werden kann. Die Steuerung der Motoren und das Auswerten der Sensoren wird dabei von einem Common Lisp-Programm geregelt.	
@@ -82,9 +82,9 @@ Der Quellcode ist verfügbar unter \cite{Code}.
 \secauthor{Simon}
 Wir haben uns am Anfang dafür entschieden einen Roboter zu bauen, der auf zwei parallel stehenden Rädern balancieren und fahren kann. Dafür benötigten wir passende Sensor, um die Lage des Roboters zu bestimmen. Da uns kein Gyrosensor von Lego zu Verfügung stand und die Daten aus dem Ultraschallsensor zu stark mit Rauschen belastet waren, haben wir uns dafür entscheiden, den Lagesensor eines Smartphones zu verwenden. Unsere grundlegende Idee war es dann aus der Lage den Fehler zu bestimmen und mit einem PID-Controller die Balance zu halten bzw zu fahren. Von Balancieren sollte zum Fahren gewechselt werden, indem mittels des PID-Controllers eine leicht gekippte Haltung eingenommen wird.
 
-\subsection{architektur}
+\subsection{Architektur}
 
-\subsubsection{allgemein} 
+\subsubsection{Allgemein} 
 \secauthor{Jannik}
 
 
