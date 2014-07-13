@@ -81,7 +81,7 @@
 
 (defun set-motor-effort-helper (effort motor)
   "This function sends the 'effort' to the 'motor'."
-  (when (> (abs effort) *min-motor-effort*) ;the motors will make an unpleasant noise, when the effort is too low
+  (when (< (abs effort) *min-motor-effort*) ;the motors will make an unpleasant noise, when the effort is too low
     (setf effort 0))
   (assert *joint-command-pub* 
           (*joint-command-pub*)
@@ -167,7 +167,7 @@
   (let* ((current-error (- goal (rudder-state robot-state)))
          (error-list '()))
     (loop while (> (abs current-error) 0.05)
-          do (add-error current-error error-list)
+          do (setf error-list (add-error current-error error-list))
              (set-rudder-motor-effort (pid error-list))
              (sleep 0.01)
              (set-rudder-motor-effort 0)
@@ -218,7 +218,7 @@
     (setf r-effort fspeed)
     (setf l-effort fspeed)
     (when (= spin 0)
-      (set-rudder-position-with-pid robot-state pi)
+      (set-rudder-position robot-state pi)
       (setf r-effort (+ r-effort yspeed))
       (setf l-effort (- l-effort yspeed)))
     (case spin
@@ -234,20 +234,25 @@
     (setf err-l (butlast err-l)))
   (push err err-l))
 
-(defparameter *kp* -4d0)
+(defparameter *kp* -0.5d0)
 (defparameter *ki* 0d0)
-(defparameter *kd* 0.5d0)
+(defparameter *kd* 0.01d0)
 
 (defun pid (error-robot-states)
   "This function is a pi controller, the first element of 'error-robot-states' is the last measurement."
   (let* ((e (first error-robot-states))
-         (l (length error-robot-states)))
-    (+ (* *kp* e)
-       (* *ki*
-          (if (= l 1)
-              0
-              (/ (reduce #'+ (rest error-robot-states))
-                 (1- l)))))))
+         (l (length error-robot-states))
+         (result 0))
+    (setf result
+          (+ (* *kp* e)
+             (* *ki*
+                (if (= l 1)
+                    0
+                    (/ (reduce #'+ (rest error-robot-states))
+                       (1- l))))))
+    (if (< result 0)
+        (+ result -0.6)
+        (+ result 0.6))))
 
 
 
