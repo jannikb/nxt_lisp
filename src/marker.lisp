@@ -27,9 +27,10 @@
 ;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ;;; POSSIBILITY OF SUCH DAMAGE.
 
-(in-package :nxt-lisp)
 
-;;; 3. datei
+;;;This file was mainly implemented by Jannik.
+
+(in-package :nxt-lisp)
 
 (defvar *visualization-advertiser* nil
   "Advertiser for the /visualization_marker topic")

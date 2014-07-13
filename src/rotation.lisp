@@ -27,6 +27,8 @@
 ;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ;;; POSSIBILITY OF SUCH DAMAGE.
 
+;;;This file was manly implemented by Simon.
+
 (in-package :nxt-lisp)
 
 (defun quaternion->rpy (qx qy qz qw)
