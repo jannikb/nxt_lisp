@@ -39,42 +39,42 @@
     (list x y z)))
     
 (defun rpy->tr (r p y)
-  "This function transforms the quaternion defined by the euler angles 'r', 'p', 'y' into a transform located at 0 0 0."
+  "This function transforms the quaternion defined by the euler angles `r', `p', `y' into a transform located at 0 0 0."
   (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0) 
                         (cl-tf:euler->quaternion :ax r
                                                  :ay p
                                                  :az y)))
 
 (defun quaternion->tr (q)
-  "This function transforms a quaternion 'q' into a transform located at 0 0 0."
+  "This function transforms a quaternion `q' into a transform located at 0 0 0."
   (cl-tf:make-transform (cl-tf:make-3d-vector 0 0 0)
                         q))
 
 (defun quaternion->point (q x y z)
-  "This function rotates a point given by 'x', 'y', 'z' by 'q'."
+  "This function rotates a point given by `x', `y', `z' by `q'."
   (cl-transforms:transform-point (quaternion->tr q) 
                                  (cl-transforms:make-3d-vector x y z)))
 
 (defun angle (p1 p2)
-  "This function calculates the angle between to points 'p1' and 'p2'."
+  "This function calculates the angle between to points `p1' and `p2'."
   (acos (+ (* (with-fields (x) p1 x) (with-fields (x) p2 x))
            (* (with-fields (y) p1 y) (with-fields (y) p2 y))
            (* (with-fields (z) p1 z) (with-fields (z) p2 z)))))
 
 (defun angle-q (q1 q2)
-  "This function calculates the angle between the quaternions 'q1' and 'q2'."
+  "This function calculates the angle between the quaternions `q1' and `q2'."
   (angle (quaternion->point q1 1 0 0)
          (quaternion->point q2 1 0 0)))
 
 (defun pitch (q)
-  "This function extracts the pitch out of the quaternion 'q'."
+  "This function extracts the pitch out of the quaternion `q' by calculatiing the angle between `q' and a second quaternion, that is rotated by 90° around the z axis."
   (let* ((qd (cl-tf:euler->quaternion :ax 0
                                       :ay 0
                                       :az 1.57)))
     (- (angle-q q qd) 1.57)))
 
 (defun roll (q)
-  "this function extracts the roll out of the quaternion 'q'."
+  "this function extracts the roll out of the quaternion `q' by calculatiing the angle between `q' and a second quaternion, that is rotated by 90° around the y axis."
   (let* ((qd (cl-tf:euler->quaternion :ax 0
                                       :ay 1.57
                                       :az 0)))

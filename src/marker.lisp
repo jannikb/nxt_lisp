@@ -35,22 +35,8 @@
 (defvar *visualization-advertiser* nil
   "Advertiser for the /visualization_marker topic")
 
-(defvar *pub* nil
-  "Advertiser for the /current-position topic")
-
-(defvar *pubi* nil
-  "Advertiser for the /goal topic")
-
-(defun visu-goal (q)
-  "This function publishes a posestamped at (0 0 0) with a rotation of 'q'."
-  (publish *pubi* 
-           (cl-tf:pose-stamped->msg 
-            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
-                                     (cl-transforms:make-identity-vector) 
-                                     q))))
-
 (defun effort-visualization (effort id)
-  "This function publishes an arrow shaped visualization marker at (-0.5 0.3 0) or (0.5 0.3 0), when 'id' == 0 or 1 respektivly and length depending on 'effort'."
+  "This function publishes an arrow shaped visualization marker at (-0.5 0.3 0) or (0.5 0.3 0), when `id' == 0 or 1 respektivly and length depending on `effort'."
   (let ((pose-stamped 
           (cl-tf:make-pose-stamped "/odom_combined" 
                                    0d0 
@@ -60,34 +46,8 @@
                                                             :az (/ pi -2)))))
     (publish-visualization-marker pose-stamped (* 0.2 effort) id)))
 
-(defun rudder-effort-visualization (effort)
-  "This function publishes an arrow shaped visualization marker at (0 0 0.4) and length depending on 'effort'."
-  (let ((pose-stamped 
-          (cl-tf:make-pose-stamped "/odom_combined" 
-                                   0d0 
-                                   (cl-transforms:make-3d-vector 0 0 0.4) 
-                                   (cl-tf:euler->quaternion :ax 0
-                                                            :ay 0
-                                                            :az pi))))
-    (publish-visualization-marker pose-stamped (* 0.2 effort) 3)))  
-
-(defun visu-handy ()
-  "This function publishes a box shaped visualization marker into the frame /asdf."
-  (publish-visualization-marker-box 
-   (cl-tf:make-pose-stamped "/asdf" 0d0 
-                            (cl-transforms:make-identity-vector) 
-                            (cl-transforms:make-identity-rotation))))
-
-(defun visu (x y z w)
-   "This function publishes a posestamped at (0 0 0) with a rotation of (x y z w)." 
-  (publish *pub* 
-           (cl-tf:pose-stamped->msg 
-            (cl-tf:make-pose-stamped "/base_footprint" 0d0 
-                                     (cl-transforms:make-identity-vector) 
-                                     (cl-transforms:make-quaternion x y z w)))))
-
 (defun publish-visualization-marker (pose-stamped length marker-id)
-  "This function publishes a arrow shaped visualization marker at 'pose-stamped' with a length given by 'length' and an id given by 'marker-id'."
+  "This function publishes a arrow shaped visualization marker at `pose-stamped' with a length given by `length' and an id given by `marker-id'."  
   (when (not *visualization-advertiser*)
     (setf *visualization-advertiser* 
           (advertise "/visualization_marker" 
@@ -120,7 +80,7 @@
                            lifetime 0))))
 
 (defun publish-visualization-marker-box (pose-stamped)
-  "This function publishes a box shaped visualization marker at 'pose-stamped' and a marker-id of 23."
+  "This function publishes a box shaped visualization marker at `pose-stamped' and a marker-id of 23."
   (when (not *visualization-advertiser*)
     (setf *visualization-advertiser* 
           (advertise "/visualization_marker" 
@@ -151,3 +111,23 @@
                            (g color) 0
                            (b color) 1
                            lifetime 0))))
+
+;This part was mainly written by Simon.
+
+(defun rudder-effort-visualization (effort)
+  "This function publishes an arrow shaped visualization marker at (0 0 0.4) and length depending on 'effort'."
+  (let ((pose-stamped 
+          (cl-tf:make-pose-stamped "/odom_combined" 
+                                   0d0 
+                                   (cl-transforms:make-3d-vector 0 0 0.4) 
+                                   (cl-tf:euler->quaternion :ax 0
+                                                            :ay 0
+                                                            :az pi))))
+    (publish-visualization-marker pose-stamped (* 0.2 effort) 3)))  
+
+(defun visu-handy ()
+  "This function publishes a box shaped visualization marker into the frame /asdf."
+  (publish-visualization-marker-box 
+   (cl-tf:make-pose-stamped "/asdf" 0d0 
+                            (cl-transforms:make-identity-vector) 
+                            (cl-transforms:make-identity-rotation))))
